@@ -38,6 +38,7 @@ All provider keys default to empty and are never hardcoded in template values.
 | `PUID` | No | unset | Optional UID remap when container starts as root for ownership repair. |
 | `PGID` | No | unset | Optional GID remap when container starts as root for ownership repair. |
 | `OPENCLAW_CHOWN` | No | `auto` | `auto` repairs ownership only when write checks fail, `true` always repairs, `false` disables repair. |
+| `OPENCLAW_TRUSTED_PROXIES` | No | `127.0.0.1,::1` (template default) | Comma-separated list or JSON array written to `gateway.trustedProxies` in `openclaw.json` at startup. |
 
 ## Volume Contract
 

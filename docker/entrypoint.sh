@@ -9,6 +9,7 @@ WORKSPACE_DIR=${OPENCLAW_WORKSPACE_DIR:-${CONFIG_DIR}/workspace}
 PORT=${OPENCLAW_GATEWAY_PORT:-18789}
 BIND_MODE=${OPENCLAW_GATEWAY_BIND:-lan}
 CHOWN_MODE=${OPENCLAW_CHOWN:-auto}
+TRUSTED_PROXIES=${OPENCLAW_TRUSTED_PROXIES:-}
 
 ensure_dirs() {
   mkdir -p "${CONFIG_DIR}" \
@@ -16,6 +17,77 @@ ensure_dirs() {
     "${APP_HOME}/.cache/qmd" \
     "${APP_HOME}/.bun" \
     "/home/linuxbrew/.linuxbrew"
+}
+
+app_user_has_rw() {
+  local path="$1"
+  gosu "${APP_USER}:${APP_GROUP}" test -r "${path}" && gosu "${APP_USER}:${APP_GROUP}" test -w "${path}"
+}
+
+auto_mode_needs_chown() {
+  local path
+
+  for path in "${CONFIG_DIR}" "${WORKSPACE_DIR}"; do
+    if ! app_user_has_rw "${path}"; then
+      return 0
+    fi
+  done
+
+  for path in \
+    "${CONFIG_DIR}/openclaw.json" \
+    "${CONFIG_DIR}/openclaw.json.bak" \
+    "${CONFIG_DIR}/canvas" \
+    "${CONFIG_DIR}/cron" \
+    "${CONFIG_DIR}/agents"; do
+    if [[ -e "${path}" ]] && ! app_user_has_rw "${path}"; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+apply_trusted_proxies() {
+  local config_file="${CONFIG_DIR}/openclaw.json"
+  local js='
+const fs = require("node:fs");
+const configPath = process.argv[1];
+const rawValue = process.argv[2];
+if (!configPath || !rawValue) process.exit(0);
+
+let proxies = null;
+try {
+  const parsed = JSON.parse(rawValue);
+  if (Array.isArray(parsed)) {
+    proxies = parsed.map((item) => String(item).trim()).filter(Boolean);
+  }
+} catch (_) {}
+
+if (!proxies) {
+  proxies = rawValue.split(",").map((item) => item.trim()).filter(Boolean);
+}
+if (!proxies.length) process.exit(0);
+
+const cfg = JSON.parse(fs.readFileSync(configPath, "utf8"));
+cfg.gateway = cfg.gateway || {};
+cfg.gateway.trustedProxies = proxies;
+fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2) + "\n");
+'
+
+  if [[ -z "${TRUSTED_PROXIES}" ]] || [[ ! -f "${config_file}" ]]; then
+    return 0
+  fi
+
+  if [[ "$(id -u)" -eq 0 ]]; then
+    if ! gosu "${APP_USER}:${APP_GROUP}" node -e "${js}" "${config_file}" "${TRUSTED_PROXIES}" >/dev/null 2>&1; then
+      echo "Warning: failed to apply OPENCLAW_TRUSTED_PROXIES to ${config_file}" >&2
+    fi
+    return 0
+  fi
+
+  if ! node -e "${js}" "${config_file}" "${TRUSTED_PROXIES}" >/dev/null 2>&1; then
+    echo "Warning: failed to apply OPENCLAW_TRUSTED_PROXIES to ${config_file}" >&2
+  fi
 }
 
 needs_chown() {
@@ -30,10 +102,8 @@ needs_chown() {
       return 1
       ;;
     auto|"")
-      if gosu "${APP_USER}:${APP_GROUP}" test -w "${CONFIG_DIR}" && gosu "${APP_USER}:${APP_GROUP}" test -w "${WORKSPACE_DIR}"; then
-        return 1
-      fi
-      return 0
+      auto_mode_needs_chown
+      return $?
       ;;
     *)
       echo "Invalid OPENCLAW_CHOWN value: ${CHOWN_MODE}. Use auto, true, or false." >&2
@@ -78,6 +148,8 @@ if [[ "$(id -u)" -eq 0 ]]; then
     chown -R "${APP_USER}:${APP_GROUP}" "${CONFIG_DIR}" "${WORKSPACE_DIR}" "${APP_HOME}/.cache" "${APP_HOME}/.bun" "/home/linuxbrew"
   fi
 
+  apply_trusted_proxies
+
   if [[ $# -eq 0 ]] || [[ "${1}" == "gateway" ]]; then
     shift || true
     exec gosu "${APP_USER}:${APP_GROUP}" node dist/index.js gateway --bind "${BIND_MODE}" --port "${PORT}" --allow-unconfigured "$@"
@@ -90,6 +162,8 @@ ensure_dirs || {
   echo "Could not create runtime directories as UID $(id -u). Check mount ownership or run once with root + PUID/PGID remap." >&2
   exit 73
 }
+
+apply_trusted_proxies
 
 if [[ $# -eq 0 ]] || [[ "${1}" == "gateway" ]]; then
   shift || true

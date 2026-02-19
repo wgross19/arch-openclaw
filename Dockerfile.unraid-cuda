@@ -95,7 +95,14 @@ RUN groupadd --gid 1000 node \
       /home/node/.bun \
       /home/linuxbrew/.linuxbrew \
   && chown -R node:node /app /home/node /home/linuxbrew \
-  && printf '%s\n' '#!/usr/bin/env bash' 'exec node /app/dist/index.js "$@"' > /usr/local/bin/openclaw \
+  && printf '%s\n' \
+    '#!/usr/bin/env bash' \
+    'set -euo pipefail' \
+    'if [[ "$(id -u)" -eq 0 ]] && command -v gosu >/dev/null 2>&1; then' \
+    '  exec gosu node:node node /app/dist/index.js "$@"' \
+    'fi' \
+    'exec node /app/dist/index.js "$@"' \
+    > /usr/local/bin/openclaw \
   && chmod +x /usr/local/bin/openclaw
 
 WORKDIR /app

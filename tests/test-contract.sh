@@ -32,6 +32,7 @@ assert_not_contains() {
 assert_contains "${TEMPLATE}" "<Network>bridge</Network>"
 assert_contains "${TEMPLATE}" "Target=\"/home/node/\\.openclaw\""
 assert_contains "${TEMPLATE}" "Target=\"OPENCLAW_GATEWAY_TOKEN\""
+assert_contains "${TEMPLATE}" "Target=\"OPENCLAW_TRUSTED_PROXIES\""
 assert_contains "${TEMPLATE}" "Required=\"true\""
 
 assert_not_contains "${TEMPLATE}" "TAILSCALE_AUTHKEY"

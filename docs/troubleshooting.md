@@ -3,14 +3,16 @@
 ## Permission Denied on Startup
 Symptoms:
 - Startup fails with directory creation/write errors under `/home/node/.openclaw`.
+- Logs show `EACCES: permission denied, open '/home/node/.openclaw/openclaw.json'`.
 
 Actions:
 1. Confirm host path ownership/permissions on appdata and workspace.
 2. For one-time repair, start container as root and set:
    - `PUID=<target uid>`
    - `PGID=<target gid>`
-   - `OPENCLAW_CHOWN=true`
-3. Restart once with defaults (non-root).
+   - `OPENCLAW_CHOWN=auto` (or `true` if you want forced recursive repair)
+3. Restart container. The entrypoint now repairs file-level ownership drift (including `openclaw.json`) when needed.
+4. Run `openclaw onboard` (not `node dist/index.js onboard`) so CLI writes stay under the runtime `node` user.
 
 ## Gateway Token Required Error
 Symptoms:
@@ -29,6 +31,26 @@ Actions:
 2. Confirm port mapping for `18789/tcp` in bridge mode.
 3. Check host firewall/network rules.
 4. If using Tailscale, verify host-level reachability to Unraid node.
+
+## Pairing Required / WebSocket 1008
+Symptoms:
+- Control UI shows `disconnected (1008): pairing required`.
+- Logs include `reason=pairing required` or `token_missing`.
+
+Actions:
+1. Open the UI URL with your gateway token:
+   - `https://<tailscale-hostname>.<tailnet>.ts.net/?token=<OPENCLAW_GATEWAY_TOKEN>`
+2. Complete device pairing once, then reconnect.
+3. If this appears together with `EACCES` on `openclaw.json`, fix permissions first, then retry pairing.
+
+## Trusted Proxy Warning With Native Tailscale
+Symptoms:
+- Logs show `Proxy headers detected from untrusted address... configure gateway.trustedProxies`.
+
+Actions:
+1. This warning is expected when access is proxied and no trusted proxy list is set.
+2. Set `OPENCLAW_TRUSTED_PROXIES=127.0.0.1,::1` in the template (advanced section).
+3. Restart the container so entrypoint writes `gateway.trustedProxies` into `/home/node/.openclaw/openclaw.json`.
 
 ## GPU Not Visible
 Symptoms:

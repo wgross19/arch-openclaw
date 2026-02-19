@@ -37,3 +37,9 @@
 1. Finalize CI pipeline for build/test/scan/publish.
 2. Add automated contract tests for XML and migration script.
 3. Produce initial beta release candidate checklist.
+
+## Deferred Feature Requests (Post-Baseline)
+1. Optional skill dependency preconfiguration for seamless first-run onboarding.
+   - Goal: reduce/manual eliminate `bun` and Homebrew installer friction during `openclaw onboard`.
+   - Scope: evaluate safe, optional preload paths for common skill installers without weakening container hardening defaults.
+   - Timing: after baseline stability/debug milestones are complete and committed.

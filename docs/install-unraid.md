@@ -27,12 +27,16 @@ openssl rand -hex 24
 
 ## First-Run Verification
 1. Check container logs for successful gateway start.
-2. Open UI:
+2. (Optional) Open container console and run onboarding:
+   - `openclaw onboard`
+   - Use the `openclaw` command (not `node dist/index.js`) so writes stay on the runtime user.
+3. Open UI:
    - Native Tailscale integration enabled: `https://<container-hostname>.<tailnet>.ts.net/?token=YOUR_GATEWAY_TOKEN`
    - No Tailscale integration: use localhost tunneling from your client instead of plain LAN HTTP.
-3. Verify persistence:
+4. If prompted for pairing in Control UI, complete the pairing flow once.
+5. Verify persistence:
    - Create a file under workspace and confirm it survives container restart.
-4. Verify model provider:
+6. Verify model provider:
    - Run a simple model request in UI.
 
 ## GPU Enablement Verification
@@ -52,6 +56,7 @@ If `nvidia-smi` fails, check host NVIDIA plugin and driver compatibility.
 - For Unraid native container Tailscale integration:
   - Enable Tailscale in the template.
   - Keep image entrypoint untouched in template options.
+  - Keep `OPENCLAW_TRUSTED_PROXIES=127.0.0.1,::1` (advanced var) so forwarded proxy headers are treated as trusted.
   - Use the MagicDNS HTTPS URL exposed by Unraid for browser access.
 
 ## Upgrade Path
