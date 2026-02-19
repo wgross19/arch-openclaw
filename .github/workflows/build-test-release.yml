@@ -21,7 +21,7 @@ on:
           - stable
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   security-events: write
 
@@ -145,6 +145,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Update Unraid template defaults for this publish
+        id: update-template
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/update-template-for-release.sh \
+            --template templates/openclaw-unraid-cuda.xml \
+            --channel "${{ needs.resolve-build-config.outputs.channel }}"
+
+      - name: Commit and push template update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- templates/openclaw-unraid-cuda.xml; then
+            echo "No template changes to commit."
+            exit 0
+          fi
+
+          git add templates/openclaw-unraid-cuda.xml
+          git commit -m "chore(template): auto-update defaults for ${{ needs.resolve-build-config.outputs.channel }} publish"
+          git push origin HEAD:main
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
