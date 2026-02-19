@@ -83,6 +83,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
   && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /tmp && chmod 1777 /tmp
+
 COPY --from=node-base /usr/local /usr/local
 
 RUN groupadd --gid 1000 node \
@@ -92,7 +94,9 @@ RUN groupadd --gid 1000 node \
       /home/node/.cache/qmd \
       /home/node/.bun \
       /home/linuxbrew/.linuxbrew \
-  && chown -R node:node /app /home/node /home/linuxbrew
+  && chown -R node:node /app /home/node /home/linuxbrew \
+  && printf '%s\n' '#!/usr/bin/env bash' 'exec node /app/dist/index.js "$@"' > /usr/local/bin/openclaw \
+  && chmod +x /usr/local/bin/openclaw
 
 WORKDIR /app
 

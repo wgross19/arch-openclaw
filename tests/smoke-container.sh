@@ -9,6 +9,7 @@ fi
 
 # 1) Non-gateway command should run without a token.
 docker run --rm "${IMAGE}" node --version >/dev/null
+docker run --rm "${IMAGE}" openclaw --help >/dev/null
 
 # 2) Gateway command should fail fast when token is missing.
 set +e
