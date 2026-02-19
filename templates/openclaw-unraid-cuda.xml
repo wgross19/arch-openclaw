@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>OpenClaw-Unraid-CUDA</Name>
+  <Repository>ghcr.io/wfg/openclaw-unraid-cuda:stable</Repository>
+  <Registry>https://ghcr.io</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/wfg/arch-openclaw/issues</Support>
+  <Project>https://github.com/wfg/arch-openclaw</Project>
+  <ReadMe>https://github.com/wfg/arch-openclaw/blob/main/docs/install-unraid.md</ReadMe>
+  <Overview>
+OpenClaw gateway image optimized for Unraid with pinned CUDA runtime libraries in-image (no runtime installers).&#13;
+&#13;
+Security defaults: bridge networking, non-root container user, no NET_ADMIN, no in-container Tailscale daemon.&#13;
+&#13;
+Remote access model: use Unraid host networking or host Tailscale integration. Do not run tailscaled in this container.&#13;
+&#13;
+Open the UI at: http://YOUR-UNRAID-IP:18789/?token=YOUR-GATEWAY-TOKEN&#13;
+&#13;
+Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API key.
+  </Overview>
+  <Category>Productivity:Tools:AI</Category>
+  <WebUI>http://[IP]:[PORT:18789]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/wfg/arch-openclaw/main/templates/openclaw-unraid-cuda.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/openclaw/openclaw/main/assets/icon.png</Icon>
+  <ExtraParams>--gpus all --shm-size=2g --restart unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Unraid NVIDIA Driver Plugin (when GPU acceleration is desired)</Requires>
+
+  <Config Name="Control UI Port" Target="18789" Default="18789" Mode="tcp" Description="Gateway and Control UI port" Type="Port" Display="always" Required="true" Mask="false">18789</Config>
+
+  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw</Config>
+  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw/workspace</Config>
+
+  <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="Gateway Port" Target="OPENCLAW_GATEWAY_PORT" Default="18789" Mode="" Description="Internal gateway port" Type="Variable" Display="always" Required="false" Mask="false">18789</Config>
+  <Config Name="Timezone" Target="TZ" Default="" Mode="" Description="Optional timezone, for example America/New_York" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <Config Name="Anthropic API Key" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Optional Anthropic API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional OpenAI API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="OpenRouter API Key" Target="OPENROUTER_API_KEY" Default="" Mode="" Description="Optional OpenRouter API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Gemini API Key" Target="GEMINI_API_KEY" Default="" Mode="" Description="Optional Gemini API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Groq API Key" Target="GROQ_API_KEY" Default="" Mode="" Description="Optional Groq API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="xAI API Key" Target="XAI_API_KEY" Default="" Mode="" Description="Optional xAI API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Z.AI API Key" Target="ZAI_API_KEY" Default="" Mode="" Description="Optional Z.AI API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+
+  <Config Name="NVIDIA Visible Devices" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="" Description="GPU visibility. Set to specific IDs if needed." Type="Variable" Display="always" Required="false" Mask="false">all</Config>
+  <Config Name="NVIDIA Driver Capabilities" Target="NVIDIA_DRIVER_CAPABILITIES" Default="compute,utility" Mode="" Description="NVIDIA capabilities exposed to container" Type="Variable" Display="always" Required="false" Mask="false">compute,utility</Config>
+
+  <Config Name="PUID (Advanced)" Target="PUID" Default="" Mode="" Description="Optional UID remap (applies only if container starts as root for one-time ownership fixes)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="PGID (Advanced)" Target="PGID" Default="" Mode="" Description="Optional GID remap (applies only if container starts as root for one-time ownership fixes)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Chown on Start (Advanced)" Target="OPENCLAW_CHOWN" Default="false" Mode="" Description="If true, recursively chowns config and workspace on startup. Use only for permission repair." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+
+  <Config Name="Projects Path (Advanced)" Target="/projects" Default="" Mode="rw" Description="Optional extra projects mount" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="QMD Cache (Advanced)" Target="/home/node/.cache/qmd" Default="" Mode="rw" Description="Optional embeddings/model cache persistence" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Bun Path (Advanced)" Target="/home/node/.bun" Default="" Mode="rw" Description="Optional Bun runtime persistence" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Homebrew Path (Advanced)" Target="/home/linuxbrew/.linuxbrew" Default="" Mode="rw" Description="Optional Homebrew persistence for advanced skill dependencies" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
+
+  <TailscaleStateDir/>
+</Container>

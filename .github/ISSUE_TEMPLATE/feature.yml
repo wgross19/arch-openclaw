@@ -1,0 +1,61 @@
+name: Feature Request
+description: Propose a new feature or enhancement for the Unraid OpenClaw CUDA distribution
+title: "[Feature]: "
+labels:
+  - type/feature
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Short feature summary
+      placeholder: Add support for...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - phase/m0
+        - phase/m1
+        - phase/m2
+        - phase/m3
+        - phase/m4
+        - phase/m5
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or operator problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Define testable outcomes.
+      placeholder: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Related issues, PRs, or blockers.
+
+  - type: input
+    id: estimate
+    attributes:
+      label: Estimate
+      description: Relative estimate (S/M/L or time)
+    validations:
+      required: true

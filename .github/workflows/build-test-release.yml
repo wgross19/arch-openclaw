@@ -1,0 +1,202 @@
+name: build-test-release
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      openclaw_ref:
+        description: "Upstream OpenClaw git tag (example: v0.10.0)"
+        required: true
+        type: string
+      channel:
+        description: "Publish channel"
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - stable
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/openclaw-unraid-cuda
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep jq rsync
+
+      - name: Run contract tests
+        run: bash tests/test-contract.sh
+
+      - name: Run migration script tests
+        run: bash tests/test-migration-script.sh
+
+  resolve-build-config:
+    runs-on: ubuntu-latest
+    needs: contract-tests
+    outputs:
+      openclaw_ref: ${{ steps.resolve.outputs.openclaw_ref }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      publish: ${{ steps.resolve.outputs.publish }}
+      version_tag: ${{ steps.resolve.outputs.version_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve build settings
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          file_ref=""
+          if [[ -f .openclaw-ref ]]; then
+            file_ref="$(tr -d '[:space:]' < .openclaw-ref)"
+          fi
+
+          openclaw_ref="${file_ref}"
+          channel="beta"
+          publish="false"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            openclaw_ref="${{ github.event.inputs.openclaw_ref }}"
+            channel="${{ github.event.inputs.channel }}"
+            publish="true"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            publish="true"
+            channel="stable"
+          fi
+
+          if [[ "${openclaw_ref}" == "SET_ME_TO_OPENCLAW_TAG" ]]; then
+            openclaw_ref=""
+          fi
+
+          if [[ -z "${openclaw_ref}" && "${publish}" == "true" ]]; then
+            echo "openclaw_ref must be set for publish events. Update .openclaw-ref or use workflow_dispatch input." >&2
+            exit 1
+          fi
+
+          if [[ -n "${openclaw_ref}" ]]; then
+            version_tag="${openclaw_ref}-cuda12.2"
+          else
+            version_tag=""
+          fi
+
+          echo "openclaw_ref=${openclaw_ref}" >> "$GITHUB_OUTPUT"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"
+
+  build-test-scan:
+    runs-on: ubuntu-latest
+    needs: resolve-build-config
+    if: needs.resolve-build-config.outputs.openclaw_ref != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local image for tests
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.unraid-cuda
+          load: true
+          push: false
+          tags: local/openclaw-unraid-cuda:test
+          build-args: |
+            OPENCLAW_REF=${{ needs.resolve-build-config.outputs.openclaw_ref }}
+
+      - name: Run container smoke tests
+        run: bash tests/smoke-container.sh local/openclaw-unraid-cuda:test
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/openclaw-unraid-cuda:test
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - resolve-build-config
+      - build-test-scan
+    if: needs.resolve-build-config.outputs.publish == 'true' && needs.resolve-build-config.outputs.openclaw_ref != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          channel="${{ needs.resolve-build-config.outputs.channel }}"
+          version_tag="${{ needs.resolve-build-config.outputs.version_tag }}"
+          sha_tag="sha-${GITHUB_SHA}"
+
+          {
+            echo "tags<<TAGS"
+            echo "${IMAGE_NAME}:${version_tag}"
+            echo "${IMAGE_NAME}:${sha_tag}"
+            echo "${IMAGE_NAME}:${channel}"
+            if [[ "${channel}" == "stable" ]]; then
+              echo "${IMAGE_NAME}:stable"
+            fi
+            echo "TAGS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push release image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.unraid-cuda
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            OPENCLAW_REF=${{ needs.resolve-build-config.outputs.openclaw_ref }}
+          provenance: true
+          sbom: true
+
+      - name: Generate release notes draft
+        run: |
+          bash scripts/release-notes.sh \
+            "${{ needs.resolve-build-config.outputs.openclaw_ref }}" \
+            "${IMAGE_NAME}" \
+            release-notes.md
+
+      - name: Upload release notes artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
