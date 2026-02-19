@@ -4,7 +4,7 @@
 Default container startup resolves to:
 
 ```bash
-node dist/index.js gateway --bind 0.0.0.0 --port ${OPENCLAW_GATEWAY_PORT:-18789}
+node dist/index.js gateway --bind ${OPENCLAW_GATEWAY_BIND:-lan} --port ${OPENCLAW_GATEWAY_PORT:-18789} --allow-unconfigured
 ```
 
 ## Required Environment Variables
@@ -16,6 +16,7 @@ node dist/index.js gateway --bind 0.0.0.0 --port ${OPENCLAW_GATEWAY_PORT:-18789}
 | Variable | Required | Default | Notes |
 |---|---|---|---|
 | `OPENCLAW_GATEWAY_PORT` | No | `18789` | Internal port gateway listens on. |
+| `OPENCLAW_GATEWAY_BIND` | No | `lan` | Gateway bind mode. Accepted values include `lan`, `loopback`, `tailnet`, `auto`, and `custom`. |
 | `TZ` | No | unset | Optional timezone override. |
 | `NVIDIA_VISIBLE_DEVICES` | No | `all` | GPU visibility selection when GPU is enabled. |
 | `NVIDIA_DRIVER_CAPABILITIES` | No | `compute,utility` | NVIDIA driver capabilities exposed to the container. |

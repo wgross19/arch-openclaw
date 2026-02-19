@@ -12,10 +12,11 @@
 - Added migration script baseline and documentation set.
 - Applied Dockerfile hardening pass: split build/runtime dependencies and switched source fetch to pinned release tarball.
 - Pinned upstream OpenClaw reference to `v2026.2.17` in `.openclaw-ref`.
+- Completed local validation build/test cycle against `v2026.2.17` including runtime startup checks.
+- Fixed validation findings: architecture-aware Node tarball selection, pinned pnpm install path, CI-safe non-interactive builds, and gateway bind-mode compatibility (`OPENCLAW_GATEWAY_BIND=lan` default).
 
 ## In Progress
-- Contract validation scripts and CI workflow hardening.
-- Final verification pass for migration and template assumptions.
+- Beta channel publish and Unraid host validation.
 
 ## Blockers
 - None currently.

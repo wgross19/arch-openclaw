@@ -7,6 +7,7 @@ APP_HOME=/home/node
 CONFIG_DIR=${OPENCLAW_CONFIG_DIR:-/home/node/.openclaw}
 WORKSPACE_DIR=${OPENCLAW_WORKSPACE_DIR:-${CONFIG_DIR}/workspace}
 PORT=${OPENCLAW_GATEWAY_PORT:-18789}
+BIND_MODE=${OPENCLAW_GATEWAY_BIND:-lan}
 
 ensure_dirs() {
   mkdir -p "${CONFIG_DIR}" \
@@ -54,7 +55,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
 
   if [[ $# -eq 0 ]] || [[ "${1}" == "gateway" ]]; then
     shift || true
-    exec gosu "${APP_USER}:${APP_GROUP}" node dist/index.js gateway --bind 0.0.0.0 --port "${PORT}" "$@"
+    exec gosu "${APP_USER}:${APP_GROUP}" node dist/index.js gateway --bind "${BIND_MODE}" --port "${PORT}" --allow-unconfigured "$@"
   fi
 
   exec gosu "${APP_USER}:${APP_GROUP}" "$@"
@@ -67,7 +68,7 @@ ensure_dirs || {
 
 if [[ $# -eq 0 ]] || [[ "${1}" == "gateway" ]]; then
   shift || true
-  exec node dist/index.js gateway --bind 0.0.0.0 --port "${PORT}" "$@"
+  exec node dist/index.js gateway --bind "${BIND_MODE}" --port "${PORT}" --allow-unconfigured "$@"
 fi
 
 exec "$@"

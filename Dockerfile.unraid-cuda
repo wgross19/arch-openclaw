@@ -2,7 +2,7 @@
 
 ARG CUDA_BASE_IMAGE=nvidia/cuda:12.2.2-runtime-ubuntu22.04
 ARG NODE_VERSION=22.12.0
-ARG PNPM_VERSION=9.15.4
+ARG PNPM_VERSION=10.23.0
 ARG OPENCLAW_SOURCE_REPO=https://github.com/openclaw/openclaw
 
 FROM ${CUDA_BASE_IMAGE} AS node-base
@@ -11,6 +11,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG NODE_VERSION
 ARG PNPM_VERSION
+ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -22,18 +23,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Install a pinned Node.js release directly from upstream tarballs.
-RUN curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
-  && tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz" -C /usr/local --strip-components=1 \
-  && rm -f "node-v${NODE_VERSION}-linux-x64.tar.xz" \
+RUN case "${TARGETARCH}" in \
+    amd64) NODE_DIST_ARCH="x64" ;; \
+    arm64) NODE_DIST_ARCH="arm64" ;; \
+    *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
+  esac \
+  && curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_DIST_ARCH}.tar.xz" \
+  && tar -xJf "node-v${NODE_VERSION}-linux-${NODE_DIST_ARCH}.tar.xz" -C /usr/local --strip-components=1 \
+  && rm -f "node-v${NODE_VERSION}-linux-${NODE_DIST_ARCH}.tar.xz" \
   && node --version \
   && npm --version
 
-RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
+RUN npm install -g "pnpm@${PNPM_VERSION}" \
+  && pnpm --version
 
 FROM node-base AS builder
 
 ARG OPENCLAW_REF
 ARG OPENCLAW_SOURCE_REPO
+ENV CI=true
 
 RUN test -n "${OPENCLAW_REF}" || (echo "OPENCLAW_REF must be set to an upstream OpenClaw git tag." && exit 1)
 RUN [[ "${OPENCLAW_REF}" =~ ^v[0-9] ]] || (echo "OPENCLAW_REF must look like a versioned tag (example: v2026.2.17)." && exit 1)
@@ -54,7 +62,6 @@ RUN curl -fsSL "${OPENCLAW_SOURCE_REPO}/archive/refs/tags/${OPENCLAW_REF}.tar.gz
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
-RUN pnpm prune --prod
 
 FROM ${CUDA_BASE_IMAGE} AS runtime
 

@@ -40,6 +40,7 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
 
   <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="Gateway Port" Target="OPENCLAW_GATEWAY_PORT" Default="18789" Mode="" Description="Internal gateway port" Type="Variable" Display="always" Required="false" Mask="false">18789</Config>
+  <Config Name="Gateway Bind Mode" Target="OPENCLAW_GATEWAY_BIND" Default="lan" Mode="" Description="Gateway bind mode (lan, loopback, tailnet, auto, custom)" Type="Variable" Display="always" Required="false" Mask="false">lan</Config>
   <Config Name="Timezone" Target="TZ" Default="" Mode="" Description="Optional timezone, for example America/New_York" Type="Variable" Display="always" Required="false" Mask="false"></Config>
 
   <Config Name="Anthropic API Key" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Optional Anthropic API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
