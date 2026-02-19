@@ -14,7 +14,7 @@ openssl rand -hex 24
 
 ## Install via Template URL (Beta Channel)
 1. In Unraid, open Docker templates and add template URL:
-   - `https://raw.githubusercontent.com/wfg/arch-openclaw/main/templates/openclaw-unraid-cuda.xml`
+   - `https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml`
 2. Create container from template.
 3. Set required values:
    - `OPENCLAW_GATEWAY_TOKEN`

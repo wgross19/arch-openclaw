@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>OpenClaw-Unraid-CUDA</Name>
-  <Repository>ghcr.io/wfg/openclaw-unraid-cuda:stable</Repository>
+  <Repository>ghcr.io/wgross19/openclaw-unraid-cuda:stable</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/wfg/arch-openclaw/issues</Support>
-  <Project>https://github.com/wfg/arch-openclaw</Project>
-  <ReadMe>https://github.com/wfg/arch-openclaw/blob/main/docs/install-unraid.md</ReadMe>
+  <Support>https://github.com/wgross19/arch-openclaw/issues</Support>
+  <Project>https://github.com/wgross19/arch-openclaw</Project>
+  <ReadMe>https://github.com/wgross19/arch-openclaw/blob/main/docs/install-unraid.md</ReadMe>
   <Overview>
 OpenClaw gateway image optimized for Unraid with pinned CUDA runtime libraries in-image (no runtime installers).&#13;
 &#13;
@@ -23,7 +23,7 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   </Overview>
   <Category>Productivity:Tools:AI</Category>
   <WebUI>http://[IP]:[PORT:18789]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/wfg/arch-openclaw/main/templates/openclaw-unraid-cuda.xml</TemplateURL>
+  <TemplateURL>https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/openclaw/openclaw/main/assets/icon.png</Icon>
   <ExtraParams>--gpus all --shm-size=2g --restart unless-stopped</ExtraParams>
   <PostArgs/>
