@@ -62,6 +62,7 @@ RUN curl -fsSL "${OPENCLAW_SOURCE_REPO}/archive/refs/tags/${OPENCLAW_REF}.tar.gz
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm build
+RUN pnpm ui:build
 
 FROM ${CUDA_BASE_IMAGE} AS runtime
 
