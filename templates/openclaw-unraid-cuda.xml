@@ -37,10 +37,10 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
 
   <Config Name="Control UI Port" Target="18789" Default="18800" Mode="tcp" Description="Gateway and Control UI host port mapped to container port 18789" Type="Port" Display="always" Required="true" Mask="false">18800</Config>
 
-  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw-cuda/test6" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test6</Config>
-  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw-cuda/test6/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test6/workspace</Config>
+  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw-cuda/test7" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test7</Config>
+  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw-cuda/test7/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test7/workspace</Config>
 
-  <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="b1cbeb72255f48d429d6cb73d1b4c4759f8728b979eaaacf" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true">b1cbeb72255f48d429d6cb73d1b4c4759f8728b979eaaacf</Config>
+  <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="1368681d29ed96f04441b9ad66f68cc15ac2dbacfcc6a3d4" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true">1368681d29ed96f04441b9ad66f68cc15ac2dbacfcc6a3d4</Config>
   <Config Name="Gateway Port" Target="OPENCLAW_GATEWAY_PORT" Default="18789" Mode="" Description="Internal gateway port" Type="Variable" Display="always" Required="false" Mask="false">18789</Config>
   <Config Name="Gateway Bind Mode" Target="OPENCLAW_GATEWAY_BIND" Default="lan" Mode="" Description="Gateway bind mode (lan, loopback, tailnet, auto, custom)" Type="Variable" Display="always" Required="false" Mask="false">lan</Config>
   <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Container timezone. Do not leave blank. Example: America/New_York" Type="Variable" Display="always" Required="true" Mask="false">America/New_York</Config>
@@ -65,5 +65,5 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   <Config Name="Bun Path (Advanced)" Target="/home/node/.bun" Default="" Mode="rw" Description="Optional Bun runtime persistence" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Homebrew Path (Advanced)" Target="/home/linuxbrew/.linuxbrew" Default="" Mode="rw" Description="Optional Homebrew persistence for advanced skill dependencies" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
 
-  <TailscaleStateDir>/mnt/user/appdata/openclaw-cuda/test6/tailscale-state</TailscaleStateDir>
+  <TailscaleStateDir>/mnt/user/appdata/openclaw-cuda/test7/tailscale-state</TailscaleStateDir>
 </Container>
