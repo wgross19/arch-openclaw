@@ -45,6 +45,8 @@ assert_contains "${DOCKERFILE}" "nvidia/cuda:12\\.2\\.2-runtime-ubuntu22\\.04"
 assert_contains "${DOCKERFILE}" "CMD \[\"gateway\"\]"
 assert_contains "${ENTRYPOINT}" "gosu \"\\$\\{APP_USER\\}:\\$\\{APP_GROUP\\}\" node dist/index\\.js gateway"
 assert_contains "${ENTRYPOINT}" "CHOWN_MODE=\\$\\{OPENCLAW_CHOWN:-auto\\}"
+assert_contains "${ENTRYPOINT}" "groupmod --non-unique --gid"
+assert_contains "${ENTRYPOINT}" "usermod --non-unique --uid"
 
 assert_not_contains "${DOCKERFILE}" "pkgs\\.tailscale\\.com"
 assert_not_contains "${ENTRYPOINT}" "tailscaled"

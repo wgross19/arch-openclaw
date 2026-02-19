@@ -65,11 +65,11 @@ fi
 
 if [[ "$(id -u)" -eq 0 ]]; then
   if [[ -n "${PGID:-}" ]] && [[ "${PGID}" != "$(id -g ${APP_GROUP})" ]]; then
-    groupmod --gid "${PGID}" "${APP_GROUP}"
+    groupmod --non-unique --gid "${PGID}" "${APP_GROUP}"
   fi
 
   if [[ -n "${PUID:-}" ]] && [[ "${PUID}" != "$(id -u ${APP_USER})" ]]; then
-    usermod --uid "${PUID}" "${APP_USER}"
+    usermod --non-unique --uid "${PUID}" "${APP_USER}"
   fi
 
   ensure_dirs
