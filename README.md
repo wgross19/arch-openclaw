@@ -8,6 +8,7 @@ Dedicated repository for a hardened, CA-ready Unraid distribution of OpenClaw wi
 - `docker/healthcheck.sh`: gateway liveness check.
 - `templates/openclaw-unraid-cuda.xml`: Unraid Community Apps template.
 - `scripts/migrate-legacy-openclaw.sh`: migration and rollback helper.
+- `scripts/unraid-debug-cycle.sh`: one-shot Unraid debug capture + onboarding runner.
 - `docs/`: architecture, install, migration, testing, release, and tracking docs.
 - `.github/workflows/build-test-release.yml`: CI build/test/scan/publish pipeline.
 
@@ -39,3 +40,4 @@ docker run --rm -it \
 - Test plan: `docs/test-plan.md`
 - Release process: `docs/release-process.md`
 - Tracking model: `docs/project-tracking.md`
+- Session handoff SOP: `docs/session-handoff.md`
