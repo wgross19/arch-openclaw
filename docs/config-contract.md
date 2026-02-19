@@ -17,7 +17,7 @@ node dist/index.js gateway --bind ${OPENCLAW_GATEWAY_BIND:-lan} --port ${OPENCLA
 |---|---|---|---|
 | `OPENCLAW_GATEWAY_PORT` | No | `18789` | Internal port gateway listens on. |
 | `OPENCLAW_GATEWAY_BIND` | No | `lan` | Gateway bind mode. Accepted values include `lan`, `loopback`, `tailnet`, `auto`, and `custom`. |
-| `TZ` | No | unset | Optional timezone override. |
+| `TZ` | No | unset | Optional timezone override (template sets a concrete default). |
 | `NVIDIA_VISIBLE_DEVICES` | No | `all` | GPU visibility selection when GPU is enabled. |
 | `NVIDIA_DRIVER_CAPABILITIES` | No | `compute,utility` | NVIDIA driver capabilities exposed to the container. |
 
@@ -37,7 +37,7 @@ All provider keys default to empty and are never hardcoded in template values.
 |---|---|---|---|
 | `PUID` | No | unset | Optional UID remap when container starts as root for ownership repair. |
 | `PGID` | No | unset | Optional GID remap when container starts as root for ownership repair. |
-| `OPENCLAW_CHOWN` | No | `false` | If `true`, recursively adjusts ownership at startup (advanced). |
+| `OPENCLAW_CHOWN` | No | `auto` | `auto` repairs ownership only when write checks fail, `true` always repairs, `false` disables repair. |
 
 ## Volume Contract
 
@@ -60,12 +60,12 @@ All provider keys default to empty and are never hardcoded in template values.
 - Required mapped port: `18789/tcp`.
 - Optional mapped port: `18790/tcp` only when bridge features are enabled.
 - Remote access over Tailscale is handled by the Unraid host, not this container.
+- When using Unraid native container Tailscale integration, the hook runs as root and then starts the original entrypoint.
 
 ## Removed Legacy Surface (Breaking)
 - `TAILSCALE_AUTHKEY` environment variable.
 - `/var/lib/tailscale` mount.
 - In-container `tailscaled` startup workflow.
-- Root-only default execution model.
 - Runtime package install/bootstrap scripts.
 - `--cap-add=NET_ADMIN` and legacy `--runtime=nvidia` defaults.
 

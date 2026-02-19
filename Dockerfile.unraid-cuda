@@ -106,6 +106,5 @@ EXPOSE 18789 18790
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 CMD ["/usr/local/bin/healthcheck.sh"]
 
-USER node
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 CMD ["gateway"]

@@ -8,6 +8,7 @@ CONFIG_DIR=${OPENCLAW_CONFIG_DIR:-/home/node/.openclaw}
 WORKSPACE_DIR=${OPENCLAW_WORKSPACE_DIR:-${CONFIG_DIR}/workspace}
 PORT=${OPENCLAW_GATEWAY_PORT:-18789}
 BIND_MODE=${OPENCLAW_GATEWAY_BIND:-lan}
+CHOWN_MODE=${OPENCLAW_CHOWN:-auto}
 
 ensure_dirs() {
   mkdir -p "${CONFIG_DIR}" \
@@ -15,6 +16,30 @@ ensure_dirs() {
     "${APP_HOME}/.cache/qmd" \
     "${APP_HOME}/.bun" \
     "/home/linuxbrew/.linuxbrew"
+}
+
+needs_chown() {
+  local mode
+  mode="$(printf '%s' "${CHOWN_MODE}" | tr '[:upper:]' '[:lower:]')"
+
+  case "${mode}" in
+    true|1|always)
+      return 0
+      ;;
+    false|0|never)
+      return 1
+      ;;
+    auto|"")
+      if gosu "${APP_USER}:${APP_GROUP}" test -w "${CONFIG_DIR}" && gosu "${APP_USER}:${APP_GROUP}" test -w "${WORKSPACE_DIR}"; then
+        return 1
+      fi
+      return 0
+      ;;
+    *)
+      echo "Invalid OPENCLAW_CHOWN value: ${CHOWN_MODE}. Use auto, true, or false." >&2
+      exit 64
+      ;;
+  esac
 }
 
 requires_gateway_token() {
@@ -49,7 +74,7 @@ if [[ "$(id -u)" -eq 0 ]]; then
 
   ensure_dirs
 
-  if [[ "${OPENCLAW_CHOWN:-false}" == "true" ]]; then
+  if needs_chown; then
     chown -R "${APP_USER}:${APP_GROUP}" "${CONFIG_DIR}" "${WORKSPACE_DIR}" "${APP_HOME}/.cache" "${APP_HOME}/.bun" "/home/linuxbrew"
   fi
 

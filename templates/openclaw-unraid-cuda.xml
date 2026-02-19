@@ -15,14 +15,16 @@ OpenClaw gateway image optimized for Unraid with pinned CUDA runtime libraries i
 &#13;
 Security defaults: bridge networking, non-root container user, no NET_ADMIN, no in-container Tailscale daemon.&#13;
 &#13;
-Remote access model: use Unraid host networking or host Tailscale integration. Do not run tailscaled in this container.&#13;
+Remote access model: use bridge networking with Unraid host Tailscale integration. Do not run tailscaled in this container.&#13;
 &#13;
-Open the UI at: http://YOUR-UNRAID-IP:18789/?token=YOUR-GATEWAY-TOKEN&#13;
+Control UI requires a secure browser context. Use HTTPS (recommended through host Tailscale/FQDN) or localhost tunneling.&#13;
+Example with Tailscale integration: https://YOUR-CONTAINER-HOSTNAME.YOUR-TAILNET.ts.net/?token=YOUR-GATEWAY-TOKEN&#13;
+When Tailscale integration is enabled, Unraid overrides entrypoint and requires root privileges for the hook. This image starts root and drops to node for OpenClaw runtime.&#13;
 &#13;
 Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API key.
   </Overview>
-  <Category>Productivity:Tools:AI</Category>
-  <WebUI>http://[IP]:[PORT:18789]/</WebUI>
+  <Category>Productivity: Tools: AI</Category>
+  <WebUI>http://[IP]:[PORT:18800]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/openclaw/openclaw/main/assets/icon.png</Icon>
   <ExtraParams>--gpus all --shm-size=2g --restart unless-stopped</ExtraParams>
@@ -33,15 +35,15 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   <DonateLink/>
   <Requires>Unraid NVIDIA Driver Plugin (when GPU acceleration is desired)</Requires>
 
-  <Config Name="Control UI Port" Target="18789" Default="18789" Mode="tcp" Description="Gateway and Control UI port" Type="Port" Display="always" Required="true" Mask="false">18789</Config>
+  <Config Name="Control UI Port" Target="18789" Default="18800" Mode="tcp" Description="Gateway and Control UI host port mapped to container port 18789" Type="Port" Display="always" Required="true" Mask="false">18800</Config>
 
-  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw</Config>
-  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw/workspace</Config>
+  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw-cuda" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda</Config>
+  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw-cuda/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/workspace</Config>
 
   <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="Gateway Port" Target="OPENCLAW_GATEWAY_PORT" Default="18789" Mode="" Description="Internal gateway port" Type="Variable" Display="always" Required="false" Mask="false">18789</Config>
   <Config Name="Gateway Bind Mode" Target="OPENCLAW_GATEWAY_BIND" Default="lan" Mode="" Description="Gateway bind mode (lan, loopback, tailnet, auto, custom)" Type="Variable" Display="always" Required="false" Mask="false">lan</Config>
-  <Config Name="Timezone" Target="TZ" Default="" Mode="" Description="Optional timezone, for example America/New_York" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Container timezone. Do not leave blank. Example: America/New_York" Type="Variable" Display="always" Required="true" Mask="false">America/New_York</Config>
 
   <Config Name="Anthropic API Key" Target="ANTHROPIC_API_KEY" Default="" Mode="" Description="Optional Anthropic API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="OpenAI API Key" Target="OPENAI_API_KEY" Default="" Mode="" Description="Optional OpenAI API key" Type="Variable" Display="always" Required="false" Mask="true"></Config>
@@ -54,9 +56,9 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   <Config Name="NVIDIA Visible Devices" Target="NVIDIA_VISIBLE_DEVICES" Default="all" Mode="" Description="GPU visibility. Set to specific IDs if needed." Type="Variable" Display="always" Required="false" Mask="false">all</Config>
   <Config Name="NVIDIA Driver Capabilities" Target="NVIDIA_DRIVER_CAPABILITIES" Default="compute,utility" Mode="" Description="NVIDIA capabilities exposed to container" Type="Variable" Display="always" Required="false" Mask="false">compute,utility</Config>
 
-  <Config Name="PUID (Advanced)" Target="PUID" Default="" Mode="" Description="Optional UID remap (applies only if container starts as root for one-time ownership fixes)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="PGID (Advanced)" Target="PGID" Default="" Mode="" Description="Optional GID remap (applies only if container starts as root for one-time ownership fixes)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="Chown on Start (Advanced)" Target="OPENCLAW_CHOWN" Default="false" Mode="" Description="If true, recursively chowns config and workspace on startup. Use only for permission repair." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="PUID (Advanced)" Target="PUID" Default="99" Mode="" Description="UID used for one-time permission alignment workflows on Unraid. Only applies if container is started as root." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID (Advanced)" Target="PGID" Default="100" Mode="" Description="GID used for one-time permission alignment workflows on Unraid. Only applies if container is started as root." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="Chown on Start (Advanced)" Target="OPENCLAW_CHOWN" Default="auto" Mode="" Description="auto fixes ownership only when needed (recommended). Use true to force every start, false to disable." Type="Variable" Display="advanced" Required="false" Mask="false">auto</Config>
 
   <Config Name="Projects Path (Advanced)" Target="/projects" Default="" Mode="rw" Description="Optional extra projects mount" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="QMD Cache (Advanced)" Target="/home/node/.cache/qmd" Default="" Mode="rw" Description="Optional embeddings/model cache persistence" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
