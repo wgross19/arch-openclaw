@@ -26,8 +26,9 @@
 
 ## Security Scan Process
 1. Scan image with Trivy in CI.
-2. Fail release pipeline on `CRITICAL,HIGH` vulnerabilities (excluding documented exceptions).
-3. Attach scan summary to workflow artifacts.
+2. Fail release pipeline on `CRITICAL,HIGH` vulnerabilities (excluding documented exceptions in `.trivyignore.yaml`).
+3. Keep every Trivy exception time-bounded (`expired_at`) and justified (`statement`), enforced by `scripts/validate-trivy-ignore.sh` in CI.
+4. Attach scan summary to workflow artifacts.
 
 ## Publish Process
 - Beta:

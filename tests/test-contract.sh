@@ -48,6 +48,10 @@ assert_contains "${ENTRYPOINT}" "gosu \"\\$\\{APP_USER\\}:\\$\\{APP_GROUP\\}\" n
 assert_contains "${ENTRYPOINT}" "CHOWN_MODE=\\$\\{OPENCLAW_CHOWN:-auto\\}"
 assert_contains "${ENTRYPOINT}" "groupmod --non-unique --gid"
 assert_contains "${ENTRYPOINT}" "usermod --non-unique --uid"
+assert_contains "${ROOT_DIR}/.github/workflows/build-test-release.yml" "Validate Trivy exception policy"
+assert_contains "${ROOT_DIR}/.github/workflows/build-test-release.yml" "trivyignores: \\.trivyignore\\.yaml"
+assert_contains "${ROOT_DIR}/.trivyignore.yaml" "expired_at:"
+assert_contains "${ROOT_DIR}/.trivyignore.yaml" "statement:"
 
 assert_not_contains "${DOCKERFILE}" "pkgs\\.tailscale\\.com"
 assert_not_contains "${ENTRYPOINT}" "tailscaled"

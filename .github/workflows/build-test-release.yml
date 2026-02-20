@@ -178,6 +178,9 @@ jobs:
       - name: Run container smoke tests
         run: bash tests/smoke-container.sh local/openclaw-unraid-cuda:test
 
+      - name: Validate Trivy exception policy
+        run: bash scripts/validate-trivy-ignore.sh .trivyignore.yaml
+
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -186,6 +189,7 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+          trivyignores: .trivyignore.yaml
 
   publish:
     runs-on: ubuntu-latest
