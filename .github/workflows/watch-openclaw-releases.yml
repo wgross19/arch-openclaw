@@ -46,7 +46,9 @@ jobs:
           printf '%s\n' "${{ steps.detect.outputs.latest }}" > .openclaw-ref
 
       - name: Create bump PR
+        id: create_pr
         if: steps.detect.outputs.latest != steps.current.outputs.current
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v7
         with:
           title: "chore(upstream): bump OpenClaw ref to ${{ steps.detect.outputs.latest }}"
@@ -63,6 +65,12 @@ jobs:
           delete-branch: true
           add-paths: |
             .openclaw-ref
+
+      - name: PR creation fallback notice
+        if: steps.detect.outputs.latest != steps.current.outputs.current && steps.create_pr.outcome == 'failure'
+        run: |
+          echo "::warning::Unable to auto-create PR with GITHUB_TOKEN. Branch was pushed; create PR manually from automation/openclaw-ref-${{ steps.detect.outputs.latest }}."
+          echo "::warning::Enable repository setting 'Allow GitHub Actions to create and approve pull requests' to fully automate this step."
 
       - name: No update required
         if: steps.detect.outputs.latest == steps.current.outputs.current
