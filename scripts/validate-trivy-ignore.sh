@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-FILE="${1:-.trivyignore.yaml}"
+POLICY_FILE="${1:-.trivyignore.yaml}"
+IGNORE_FILE="${2:-.trivyignore}"
 
-if [[ ! -f "${FILE}" ]]; then
-  echo "trivy ignore policy not found: ${FILE}" >&2
+if [[ ! -f "${POLICY_FILE}" ]]; then
+  echo "trivy ignore policy not found: ${POLICY_FILE}" >&2
   exit 1
 fi
 
-python3 - "${FILE}" <<'PY'
+if [[ ! -f "${IGNORE_FILE}" ]]; then
+  echo "trivy ignore list not found: ${IGNORE_FILE}" >&2
+  exit 1
+fi
+
+python3 - "${POLICY_FILE}" "${IGNORE_FILE}" <<'PY'
 import datetime as dt
 import re
 import sys
 from pathlib import Path
 
-path = Path(sys.argv[1])
-lines = path.read_text(encoding="utf-8").splitlines()
+policy_path = Path(sys.argv[1])
+ignore_path = Path(sys.argv[2])
+lines = policy_path.read_text(encoding="utf-8").splitlines()
 
 entries = []
 current = None
@@ -67,6 +74,27 @@ for entry in entries:
         continue
     if exp_date < today:
         errors.append(f"{cve}: expired on {exp_date.isoformat()}")
+
+# Ensure runtime ignore list exactly matches policy IDs.
+ignore_ids = []
+for raw in ignore_path.read_text(encoding="utf-8").splitlines():
+    line = raw.strip()
+    if not line or line.startswith("#"):
+        continue
+    ignore_ids.append(line)
+
+bad_ignore_ids = [cve for cve in ignore_ids if not re.fullmatch(r"CVE-\d{4}-\d{4,}", cve)]
+for bad in bad_ignore_ids:
+    errors.append(f"invalid CVE id in ignore list: {bad!r}")
+
+ignore_set = set(ignore_ids)
+if ignore_set != seen:
+    missing_in_ignore = sorted(seen - ignore_set)
+    extra_in_ignore = sorted(ignore_set - seen)
+    if missing_in_ignore:
+        errors.append(f"missing from {ignore_path}: {', '.join(missing_in_ignore)}")
+    if extra_in_ignore:
+        errors.append(f"extra in {ignore_path}: {', '.join(extra_in_ignore)}")
 
 if errors:
     print("trivy ignore policy validation failed:", file=sys.stderr)
