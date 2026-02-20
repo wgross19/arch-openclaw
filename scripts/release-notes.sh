@@ -17,7 +17,7 @@ cat > "${OUT_PATH}" <<NOTES
 ## Build Metadata
 - Date (UTC): ${DATE_UTC}
 - Upstream OpenClaw tag: ${OPENCLAW_REF}
-- CUDA baseline: 12.2
+- CUDA baseline: 13.1.1
 - Image repository: ${IMAGE_NAME}
 
 ## Contract Summary

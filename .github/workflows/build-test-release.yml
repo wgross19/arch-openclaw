@@ -142,9 +142,9 @@ jobs:
               echo "Stable release mismatch: tag resolved to '${openclaw_ref}' but .openclaw-ref is '${file_ref}'." >&2
               exit 1
             fi
-            version_tag="${openclaw_ref}-cuda12.2-${arch_rev}"
+            version_tag="${openclaw_ref}-cuda13.1-${arch_rev}"
           elif [[ "${publish}" == "true" ]]; then
-            version_tag="${openclaw_ref}-cuda12.2-beta"
+            version_tag="${openclaw_ref}-cuda13.1-beta"
           fi
 
           echo "openclaw_ref=${openclaw_ref}" >> "$GITHUB_OUTPUT"

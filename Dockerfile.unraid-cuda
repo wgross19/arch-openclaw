@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-ARG CUDA_BASE_IMAGE=nvidia/cuda:12.2.2-runtime-ubuntu22.04
+ARG CUDA_BASE_IMAGE=nvidia/cuda:13.1.1-runtime-ubuntu22.04@sha256:15ce727989c6937267361514a3ae2452ee13456eeb22cd170c52a854ac563cdc
 ARG NODE_VERSION=22.12.0
-ARG PNPM_VERSION=10.23.0
+ARG PNPM_VERSION=10.27.0
 ARG OPENCLAW_SOURCE_REPO=https://github.com/openclaw/openclaw
 
 FROM ${CUDA_BASE_IMAGE} AS node-base

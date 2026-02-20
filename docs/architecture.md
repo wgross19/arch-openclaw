@@ -54,7 +54,7 @@ flowchart LR
 |---|---|
 | Unraid | 6.12+ |
 | GPU support | NVIDIA only |
-| CUDA runtime | 12.2 (`nvidia/cuda:12.2.2-runtime-ubuntu22.04`) |
+| CUDA runtime | 13.1 (`nvidia/cuda:13.1.1-runtime-ubuntu22.04`) |
 | OpenClaw source | Pinned upstream git tags |
 | Network mode | Bridge + explicit port mapping |
 | Tailscale | Host-integrated only |

@@ -4,7 +4,7 @@
 - `beta`: pre-CA validation channel.
 - `stable`: production channel after stable gate.
 - Git release tags (source): `v<openclaw-ref>-rN` (example: `v2026.2.17-r1`).
-- Immutable image tags: `<openclaw-ref>-cuda12.2-rN` (stable) and `<openclaw-ref>-cuda12.2-beta` (beta candidate).
+- Immutable image tags: `<openclaw-ref>-cuda13.1-rN` (stable) and `<openclaw-ref>-cuda13.1-beta` (beta candidate).
 - Immutable source traceability tag: `sha-<git-sha>`.
 
 ## Workflow Triggers
@@ -32,13 +32,13 @@
 ## Publish Process
 - Beta:
   - Triggered when `.openclaw-ref` changes on `main` (for example, merge of watcher PR), or manually dispatched.
-  - Push `beta`, `sha-*`, and versioned `*-cuda12.2-beta` tag.
+  - Push `beta`, `sha-*`, and versioned `*-cuda13.1-beta` tag.
 - Stable:
   - Triggered by git tag `v<openclaw-ref>-rN` after beta soak criteria are satisfied.
   - Tag parser derives `openclaw_ref` and `rN`, verifies `.openclaw-ref` matches, then publishes:
     - `stable`
     - `sha-*`
-    - `<openclaw-ref>-cuda12.2-rN`
+    - `<openclaw-ref>-cuda13.1-rN`
 
 ## Release Notes Template
 Each release note must include:

@@ -42,7 +42,7 @@ assert_not_contains "${TEMPLATE}" "sk-ant-"
 assert_not_contains "${TEMPLATE}" "sk-proj-"
 assert_not_contains "${TEMPLATE}" "tskey-auth"
 
-assert_contains "${DOCKERFILE}" "nvidia/cuda:12\\.2\\.2-runtime-ubuntu22\\.04"
+assert_contains "${DOCKERFILE}" "nvidia/cuda:13\\.1\\.1-runtime-ubuntu22\\.04@sha256:[a-f0-9]{64}"
 assert_contains "${DOCKERFILE}" "CMD \[\"gateway\"\]"
 assert_contains "${ENTRYPOINT}" "gosu \"\\$\\{APP_USER\\}:\\$\\{APP_GROUP\\}\" node dist/index\\.js gateway"
 assert_contains "${ENTRYPOINT}" "CHOWN_MODE=\\$\\{OPENCLAW_CHOWN:-auto\\}"

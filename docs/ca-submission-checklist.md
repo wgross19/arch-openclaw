@@ -19,7 +19,7 @@
 ## GPU Contract
 - [ ] GPU params use `--gpus all`.
 - [ ] NVIDIA env defaults are set and documented.
-- [ ] CUDA baseline in docs matches image build (`12.2`).
+- [ ] CUDA baseline in docs matches image build (`13.1`).
 
 ## Docs and Supportability
 - [ ] Install guide updated for current release.
