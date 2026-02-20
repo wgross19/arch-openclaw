@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>OpenClaw-Unraid-CUDA</Name>
+  <Name>OpenClaw-CUDA</Name>
   <Repository>ghcr.io/wgross19/openclaw-unraid-cuda:stable</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
@@ -26,7 +26,7 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   <Category>Productivity: Tools: AI</Category>
   <WebUI>http://[IP]:[PORT:18800]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/openclaw/openclaw/main/assets/icon.png</Icon>
+  <Icon>https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/openclaw.webp</Icon>
   <ExtraParams>--pull always --gpus all --shm-size=2g --restart unless-stopped</ExtraParams>
   <PostArgs/>
   <CPUset/>
@@ -37,8 +37,8 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
 
   <Config Name="Control UI Port" Target="18789" Default="18800" Mode="tcp" Description="Gateway and Control UI host port mapped to container port 18789" Type="Port" Display="always" Required="true" Mask="false">18800</Config>
 
-  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw-cuda/test7" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test7</Config>
-  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw-cuda/test7/workspace" Mode="rw" Description="Workspace for files, memory, and projects managed by OpenClaw" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/test7/workspace</Config>
+  <Config Name="OpenClaw Config" Target="/home/node/.openclaw" Default="/mnt/user/appdata/openclaw-cuda" Mode="rw" Description="Persistent OpenClaw configuration and session data" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda</Config>
+  <Config Name="OpenClaw Workspace" Target="/home/node/.openclaw/workspace" Default="/mnt/user/appdata/openclaw-cuda/workspace" Mode="rw" Description="You &lt;-&gt; Agent shared workspace. Keep this path private; it stores the agent's core behavior/persona files and memory state (AGENTS.md, SOUL.md, USER.md, IDENTITY.md, TOOLS.md, memory/*)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/openclaw-cuda/workspace</Config>
 
   <Config Name="Gateway Token" Target="OPENCLAW_GATEWAY_TOKEN" Default="1368681d29ed96f04441b9ad66f68cc15ac2dbacfcc6a3d4" Mode="" Description="Required authentication token for UI/API access. Example: openssl rand -hex 24" Type="Variable" Display="always" Required="true" Mask="true">1368681d29ed96f04441b9ad66f68cc15ac2dbacfcc6a3d4</Config>
   <Config Name="Gateway Port" Target="OPENCLAW_GATEWAY_PORT" Default="18789" Mode="" Description="Internal gateway port" Type="Variable" Display="always" Required="false" Mask="false">18789</Config>
@@ -66,5 +66,5 @@ Before first run, set OPENCLAW_GATEWAY_TOKEN and at least one model provider API
   <Config Name="Bun Path (Advanced)" Target="/home/node/.bun" Default="" Mode="rw" Description="Optional Bun runtime persistence" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
   <Config Name="Homebrew Path (Advanced)" Target="/home/linuxbrew/.linuxbrew" Default="" Mode="rw" Description="Optional Homebrew persistence for advanced skill dependencies" Type="Path" Display="advanced" Required="false" Mask="false"></Config>
 
-  <TailscaleStateDir>/mnt/user/appdata/openclaw-cuda/test7/tailscale-state</TailscaleStateDir>
+  <TailscaleStateDir>/mnt/user/appdata/openclaw-cuda/tailscale-state</TailscaleStateDir>
 </Container>
