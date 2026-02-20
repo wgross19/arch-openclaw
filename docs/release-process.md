@@ -3,13 +3,16 @@
 ## Channels and Tagging
 - `beta`: pre-CA validation channel.
 - `stable`: production channel after stable gate.
-- Immutable version tags: `<openclaw-tag>-cuda12.2`.
+- Git release tags (source): `v<openclaw-ref>-rN` (example: `v2026.2.17-r1`).
+- Immutable image tags: `<openclaw-ref>-cuda12.2-rN` (stable) and `<openclaw-ref>-cuda12.2-beta` (beta candidate).
 - Immutable source traceability tag: `sha-<git-sha>`.
 
 ## Workflow Triggers
 - Pull requests: run validation and contract tests.
-- Git tags (`v*`): build, scan, and publish stable artifacts.
-- Manual dispatch: build/publish beta candidate for selected OpenClaw tag.
+- Push to `main` with `.openclaw-ref` changes: build, scan, and publish `beta`.
+- Git tags (`v*-r*`): build, scan, and publish stable artifacts.
+- Manual dispatch: build/publish beta or stable candidate for selected OpenClaw tag/revision.
+- Scheduled upstream watcher (`watch-openclaw-releases`): opens a PR when OpenClaw publishes a newer stable release.
 
 ## Build Process
 1. Resolve OpenClaw upstream tag (`OPENCLAW_REF`) from workflow input.
@@ -28,11 +31,14 @@
 
 ## Publish Process
 - Beta:
-  - Manual dispatch with `channel=beta` and selected `OPENCLAW_REF`.
-  - Push `beta`, `sha-*`, and versioned `*-cuda12.2` tags.
+  - Triggered when `.openclaw-ref` changes on `main` (for example, merge of watcher PR), or manually dispatched.
+  - Push `beta`, `sha-*`, and versioned `*-cuda12.2-beta` tag.
 - Stable:
-  - Triggered by release tag after beta soak criteria are satisfied.
-  - Push `stable`, `sha-*`, and versioned `*-cuda12.2` tags.
+  - Triggered by git tag `v<openclaw-ref>-rN` after beta soak criteria are satisfied.
+  - Tag parser derives `openclaw_ref` and `rN`, verifies `.openclaw-ref` matches, then publishes:
+    - `stable`
+    - `sha-*`
+    - `<openclaw-ref>-cuda12.2-rN`
 
 ## Release Notes Template
 Each release note must include:

@@ -3,13 +3,22 @@ name: build-test-release
 on:
   pull_request:
   push:
+    branches:
+      - main
+    paths:
+      - ".openclaw-ref"
     tags:
-      - "v*"
+      - "v*-r*"
   workflow_dispatch:
     inputs:
       openclaw_ref:
-        description: "Upstream OpenClaw git tag (example: v0.10.0)"
-        required: true
+        description: "Upstream OpenClaw git tag (defaults to .openclaw-ref when empty)"
+        required: false
+        type: string
+      arch_rev:
+        description: "Arch release revision (format: rN; default r0)"
+        required: false
+        default: r0
         type: string
       channel:
         description: "Publish channel"
@@ -51,6 +60,7 @@ jobs:
     needs: contract-tests
     outputs:
       openclaw_ref: ${{ steps.resolve.outputs.openclaw_ref }}
+      arch_rev: ${{ steps.resolve.outputs.arch_rev }}
       channel: ${{ steps.resolve.outputs.channel }}
       publish: ${{ steps.resolve.outputs.publish }}
       version_tag: ${{ steps.resolve.outputs.version_tag }}
@@ -70,16 +80,38 @@ jobs:
           fi
 
           openclaw_ref="${file_ref}"
+          arch_rev="r0"
           channel="beta"
           publish="false"
+          version_tag=""
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            openclaw_ref="${{ github.event.inputs.openclaw_ref }}"
+            input_ref="${{ github.event.inputs.openclaw_ref }}"
+            input_arch_rev="${{ github.event.inputs.arch_rev }}"
+            if [[ -n "${input_ref}" ]]; then
+              openclaw_ref="${input_ref}"
+            fi
+            if [[ -n "${input_arch_rev}" ]]; then
+              arch_rev="${input_arch_rev}"
+            fi
             channel="${{ github.event.inputs.channel }}"
             publish="true"
           elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             publish="true"
-            channel="stable"
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              tag="${GITHUB_REF_NAME}"
+              if [[ "${tag}" =~ ^(.+)-r([0-9]+)$ ]]; then
+                openclaw_ref="${BASH_REMATCH[1]}"
+                arch_rev="r${BASH_REMATCH[2]}"
+              else
+                echo "Tag '${tag}' must match format v<openclaw-ref>-rN (example: v2026.2.17-r1)." >&2
+                exit 1
+              fi
+              channel="stable"
+            else
+              channel="beta"
+              arch_rev="r0"
+            fi
           fi
 
           if [[ "${openclaw_ref}" == "SET_ME_TO_OPENCLAW_TAG" ]]; then
@@ -91,13 +123,32 @@ jobs:
             exit 1
           fi
 
-          if [[ -n "${openclaw_ref}" ]]; then
-            version_tag="${openclaw_ref}-cuda12.2"
-          else
-            version_tag=""
+          if [[ "${channel}" != "beta" && "${channel}" != "stable" ]]; then
+            echo "Unsupported channel: ${channel}" >&2
+            exit 1
+          fi
+
+          if [[ ! "${arch_rev}" =~ ^r[0-9]+$ ]]; then
+            echo "arch_rev must match rN (example: r1)." >&2
+            exit 1
+          fi
+
+          if [[ "${channel}" == "stable" && "${publish}" == "true" ]]; then
+            if [[ -z "${file_ref}" ]]; then
+              echo ".openclaw-ref must be set for stable publish events." >&2
+              exit 1
+            fi
+            if [[ "${openclaw_ref}" != "${file_ref}" ]]; then
+              echo "Stable release mismatch: tag resolved to '${openclaw_ref}' but .openclaw-ref is '${file_ref}'." >&2
+              exit 1
+            fi
+            version_tag="${openclaw_ref}-cuda12.2-${arch_rev}"
+          elif [[ "${publish}" == "true" ]]; then
+            version_tag="${openclaw_ref}-cuda12.2-beta"
           fi
 
           echo "openclaw_ref=${openclaw_ref}" >> "$GITHUB_OUTPUT"
+          echo "arch_rev=${arch_rev}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
           echo "publish=${publish}" >> "$GITHUB_OUTPUT"
           echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"

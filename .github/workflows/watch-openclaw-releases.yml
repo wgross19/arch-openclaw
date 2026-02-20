@@ -1,0 +1,69 @@
+name: watch-openclaw-releases
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-openclaw-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect latest upstream stable release
+        id: detect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data } = await github.rest.repos.getLatestRelease({
+              owner: 'openclaw',
+              repo: 'openclaw',
+            });
+            core.setOutput('latest', data.tag_name);
+
+      - name: Read current pinned release
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          current=""
+          if [[ -f .openclaw-ref ]]; then
+            current="$(tr -d '[:space:]' < .openclaw-ref)"
+          fi
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+
+      - name: Update .openclaw-ref
+        if: steps.detect.outputs.latest != steps.current.outputs.current
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' "${{ steps.detect.outputs.latest }}" > .openclaw-ref
+
+      - name: Create bump PR
+        if: steps.detect.outputs.latest != steps.current.outputs.current
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "chore(upstream): bump OpenClaw ref to ${{ steps.detect.outputs.latest }}"
+          commit-message: "chore(upstream): bump OpenClaw ref to ${{ steps.detect.outputs.latest }}"
+          body: |
+            Automated OpenClaw upstream release sync.
+
+            - Previous `.openclaw-ref`: `${{ steps.current.outputs.current }}`
+            - New upstream release: `${{ steps.detect.outputs.latest }}`
+
+            Merging this PR triggers the beta rebuild flow via `build-test-release`.
+          branch: "automation/openclaw-ref-${{ steps.detect.outputs.latest }}"
+          base: main
+          delete-branch: true
+          add-paths: |
+            .openclaw-ref
+
+      - name: No update required
+        if: steps.detect.outputs.latest == steps.current.outputs.current
+        run: echo "No upstream OpenClaw update detected."
