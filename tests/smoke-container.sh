@@ -7,6 +7,15 @@ if [[ -z "${IMAGE}" ]]; then
   exit 1
 fi
 
+log_has() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q -- "${pattern}"
+  else
+    grep -Eq -- "${pattern}"
+  fi
+}
+
 # 1) Non-gateway command should run without a token.
 docker run --rm "${IMAGE}" node --version >/dev/null
 docker run --rm "${IMAGE}" openclaw --help >/dev/null
@@ -38,20 +47,20 @@ docker run -d --name "${CONTAINER_NAME}" \
   "${IMAGE}" >/dev/null
 
 for _ in {1..20}; do
-  if docker logs "${CONTAINER_NAME}" 2>&1 | rg -q "listening on ws://0.0.0.0:18789"; then
+  if docker logs "${CONTAINER_NAME}" 2>&1 | log_has "listening on ws://0.0.0.0:18789"; then
     break
   fi
   sleep 1
 done
 
 LOGS="$(docker logs "${CONTAINER_NAME}" 2>&1 || true)"
-if ! printf '%s' "${LOGS}" | rg -q "listening on ws://0.0.0.0:18789"; then
+if ! printf '%s' "${LOGS}" | log_has "listening on ws://0.0.0.0:18789"; then
   echo "gateway did not reach listening state during smoke test" >&2
   printf '%s\n' "${LOGS}" >&2
   exit 1
 fi
 
-if printf '%s' "${LOGS}" | rg -q "Control UI assets missing; building|Control UI build failed"; then
+if printf '%s' "${LOGS}" | log_has "Control UI assets missing; building|Control UI build failed"; then
   echo "runtime UI build path was triggered; image should ship prebuilt UI assets" >&2
   printf '%s\n' "${LOGS}" >&2
   exit 1
