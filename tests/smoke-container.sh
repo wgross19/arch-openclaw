@@ -21,7 +21,11 @@ container_running() {
 }
 
 gateway_process_running() {
-  docker exec "${CONTAINER_NAME}" sh -lc 'ps -eo cmd | grep -F "dist/index.js gateway" | grep -v grep >/dev/null'
+  docker exec "${CONTAINER_NAME}" sh -lc 'ps -eo cmd | grep -E "(dist/index.js gateway|openclaw-gateway)" | grep -v grep >/dev/null'
+}
+
+gateway_healthcheck_ok() {
+  docker exec "${CONTAINER_NAME}" /usr/local/bin/healthcheck.sh >/dev/null 2>&1
 }
 
 # 1) Non-gateway command should run without a token.
@@ -54,8 +58,11 @@ docker run -d --name "${CONTAINER_NAME}" \
   -e "OPENCLAW_GATEWAY_PORT=18789" \
   "${IMAGE}" >/dev/null
 
-for _ in {1..20}; do
+for _ in {1..60}; do
   if docker logs "${CONTAINER_NAME}" 2>&1 | log_has "listening on ws://(0\\.0\\.0\\.0|127\\.0\\.0\\.1):18789"; then
+    break
+  fi
+  if container_running && gateway_healthcheck_ok; then
     break
   fi
   if ! container_running; then
@@ -67,11 +74,13 @@ done
 LOGS="$(docker logs "${CONTAINER_NAME}" 2>&1 || true)"
 if ! printf '%s' "${LOGS}" | log_has "listening on ws://(0\\.0\\.0\\.0|127\\.0\\.0\\.1):18789"; then
   # Newer OpenClaw builds may not always emit the old "listening on ..." log line.
-  # Treat a live gateway process in a running container as a valid readiness signal.
-  if container_running && gateway_process_running; then
-    echo "gateway process is running without explicit listening log line; continuing smoke test" >&2
+  # Treat an in-container healthcheck response or live gateway process as readiness.
+  if container_running && (gateway_healthcheck_ok || gateway_process_running); then
+    echo "gateway is reachable without explicit listening log line; continuing smoke test" >&2
   else
     echo "gateway did not reach listening state during smoke test" >&2
+    docker inspect -f 'container_state={{.State.Status}} exit_code={{.State.ExitCode}} error={{.State.Error}}' "${CONTAINER_NAME}" >&2 || true
+    docker ps -a --filter "name=${CONTAINER_NAME}" >&2 || true
     printf '%s\n' "${LOGS}" >&2
     exit 1
   fi
