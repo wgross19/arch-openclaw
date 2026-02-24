@@ -64,6 +64,8 @@ jobs:
       channel: ${{ steps.resolve.outputs.channel }}
       publish: ${{ steps.resolve.outputs.publish }}
       version_tag: ${{ steps.resolve.outputs.version_tag }}
+      version_tag_core: ${{ steps.resolve.outputs.version_tag_core }}
+      version_tag_power: ${{ steps.resolve.outputs.version_tag_power }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -84,6 +86,8 @@ jobs:
           channel="beta"
           publish="false"
           version_tag=""
+          version_tag_core=""
+          version_tag_power=""
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             input_ref="${{ github.event.inputs.openclaw_ref }}"
@@ -104,7 +108,7 @@ jobs:
                 openclaw_ref="${BASH_REMATCH[1]}"
                 arch_rev="r${BASH_REMATCH[2]}"
               else
-                echo "Tag '${tag}' must match format v<openclaw-ref>-rN (example: v2026.2.17-r1)." >&2
+                echo "Tag '${tag}' must match format v<openclaw-ref>-rN (example: v2026.2.23-r1)." >&2
                 exit 1
               fi
               channel="stable"
@@ -142,21 +146,31 @@ jobs:
               echo "Stable release mismatch: tag resolved to '${openclaw_ref}' but .openclaw-ref is '${file_ref}'." >&2
               exit 1
             fi
-            version_tag="${openclaw_ref}-cuda13.1-${arch_rev}"
+            version_tag_core="${openclaw_ref}-cuda13.1-${arch_rev}"
+            version_tag_power="${openclaw_ref}-cuda13.1-power-${arch_rev}"
           elif [[ "${publish}" == "true" ]]; then
-            version_tag="${openclaw_ref}-cuda13.1-beta"
+            version_tag_core="${openclaw_ref}-cuda13.1-beta"
+            version_tag_power="${openclaw_ref}-cuda13.1-power-beta"
           fi
+
+          version_tag="${version_tag_core}"
 
           echo "openclaw_ref=${openclaw_ref}" >> "$GITHUB_OUTPUT"
           echo "arch_rev=${arch_rev}" >> "$GITHUB_OUTPUT"
           echo "channel=${channel}" >> "$GITHUB_OUTPUT"
           echo "publish=${publish}" >> "$GITHUB_OUTPUT"
           echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"
+          echo "version_tag_core=${version_tag_core}" >> "$GITHUB_OUTPUT"
+          echo "version_tag_power=${version_tag_power}" >> "$GITHUB_OUTPUT"
 
   build-test-scan:
     runs-on: ubuntu-latest
     needs: resolve-build-config
     if: needs.resolve-build-config.outputs.openclaw_ref != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [core, power]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -164,27 +178,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build local image for tests
+      - name: Build local image for tests (${{ matrix.profile }})
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.unraid-cuda
+          target: runtime-${{ matrix.profile }}
+          platforms: linux/amd64
           load: true
           push: false
-          tags: local/openclaw-unraid-cuda:test
+          tags: local/openclaw-unraid-cuda:${{ matrix.profile }}-test
           build-args: |
             OPENCLAW_REF=${{ needs.resolve-build-config.outputs.openclaw_ref }}
 
-      - name: Run container smoke tests
-        run: bash tests/smoke-container.sh local/openclaw-unraid-cuda:test
+      - name: Run container smoke tests (${{ matrix.profile }})
+        run: bash tests/smoke-container.sh local/openclaw-unraid-cuda:${{ matrix.profile }}-test ${{ matrix.profile }}
 
       - name: Validate Trivy exception policy
         run: bash scripts/validate-trivy-ignore.sh .trivyignore.yaml .trivyignore
 
-      - name: Scan image with Trivy
+      - name: Scan image with Trivy (${{ matrix.profile }})
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: local/openclaw-unraid-cuda:test
+          image-ref: local/openclaw-unraid-cuda:${{ matrix.profile }}-test
           format: table
           exit-code: 1
           ignore-unfixed: true
@@ -197,6 +213,10 @@ jobs:
       - resolve-build-config
       - build-test-scan
     if: needs.resolve-build-config.outputs.publish == 'true' && needs.resolve-build-config.outputs.openclaw_ref != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [core, power]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -211,31 +231,45 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME != '' && secrets.GHCR_USERNAME || github.actor }}
           password: ${{ secrets.GHCR_TOKEN != '' && secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Build tags
+      - name: Build tags (${{ matrix.profile }})
         id: tags
         shell: bash
         run: |
           set -euo pipefail
           channel="${{ needs.resolve-build-config.outputs.channel }}"
-          version_tag="${{ needs.resolve-build-config.outputs.version_tag }}"
+          profile="${{ matrix.profile }}"
           sha_tag="sha-${GITHUB_SHA}"
+
+          if [[ "${profile}" == "core" ]]; then
+            version_tag="${{ needs.resolve-build-config.outputs.version_tag_core }}"
+            profile_channel_tag="${channel}"
+            extra_stable_alias=""
+            profile_sha_tag="${sha_tag}"
+          else
+            version_tag="${{ needs.resolve-build-config.outputs.version_tag_power }}"
+            profile_channel_tag="power-${channel}"
+            extra_stable_alias="power"
+            profile_sha_tag="${sha_tag}-power"
+          fi
 
           {
             echo "tags<<TAGS"
             echo "${IMAGE_NAME}:${version_tag}"
-            echo "${IMAGE_NAME}:${sha_tag}"
-            echo "${IMAGE_NAME}:${channel}"
-            if [[ "${channel}" == "stable" ]]; then
-              echo "${IMAGE_NAME}:stable"
+            echo "${IMAGE_NAME}:${profile_sha_tag}"
+            echo "${IMAGE_NAME}:${profile_channel_tag}"
+            if [[ "${channel}" == "stable" && -n "${extra_stable_alias}" ]]; then
+              echo "${IMAGE_NAME}:${extra_stable_alias}"
             fi
             echo "TAGS"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build and push release image
+      - name: Build and push release image (${{ matrix.profile }})
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.unraid-cuda
+          target: runtime-${{ matrix.profile }}
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.tags.outputs.tags }}
           build-args: |
@@ -243,32 +277,40 @@ jobs:
           provenance: true
           sbom: true
 
-      - name: Update Unraid template defaults for this publish
+      - name: Update Unraid template defaults for this publish (core + power)
+        if: matrix.profile == 'core'
         id: update-template
         shell: bash
         run: |
           set -euo pipefail
           scripts/update-template-for-release.sh \
             --template templates/openclaw-unraid-cuda.xml \
-            --channel "${{ needs.resolve-build-config.outputs.channel }}"
+            --channel "${{ needs.resolve-build-config.outputs.channel }}" \
+            --profile core
+          scripts/update-template-for-release.sh \
+            --template templates/openclaw-unraid-cuda-power.xml \
+            --channel "${{ needs.resolve-build-config.outputs.channel }}" \
+            --profile power
 
       - name: Commit and push template update
+        if: matrix.profile == 'core'
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet -- templates/openclaw-unraid-cuda.xml; then
+          if git diff --quiet -- templates/openclaw-unraid-cuda.xml templates/openclaw-unraid-cuda-power.xml; then
             echo "No template changes to commit."
             exit 0
           fi
 
-          git add templates/openclaw-unraid-cuda.xml
+          git add templates/openclaw-unraid-cuda.xml templates/openclaw-unraid-cuda-power.xml
           git commit -m "chore(template): auto-update defaults for ${{ needs.resolve-build-config.outputs.channel }} publish"
           git push origin HEAD:main
 
       - name: Generate release notes draft
+        if: matrix.profile == 'core'
         run: |
           bash scripts/release-notes.sh \
             "${{ needs.resolve-build-config.outputs.openclaw_ref }}" \
@@ -276,6 +318,7 @@ jobs:
             release-notes.md
 
       - name: Upload release notes artifact
+        if: matrix.profile == 'core'
         uses: actions/upload-artifact@v4
         with:
           name: release-notes

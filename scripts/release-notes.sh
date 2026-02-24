@@ -19,6 +19,7 @@ cat > "${OUT_PATH}" <<NOTES
 - Upstream OpenClaw tag: ${OPENCLAW_REF}
 - CUDA baseline: 13.1.1
 - Image repository: ${IMAGE_NAME}
+- Profile images: core (default tags) and power (`-power-*` tags)
 
 ## Contract Summary
 - Bridge networking default with explicit UI port mapping.
@@ -34,8 +35,10 @@ cat > "${OUT_PATH}" <<NOTES
 ## Validation Checklist
 - [ ] Contract tests passed
 - [ ] Migration tests passed
-- [ ] Smoke container tests passed
-- [ ] Trivy scan passed
+- [ ] Smoke container tests passed (core)
+- [ ] Smoke container tests passed (power)
+- [ ] Trivy scan passed (core)
+- [ ] Trivy scan passed (power)
 
 ## Known Issues
 - Add any version-specific known issues before publishing a GitHub release.

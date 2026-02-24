@@ -3,10 +3,11 @@ set -euo pipefail
 
 TEMPLATE_PATH="templates/openclaw-unraid-cuda.xml"
 CHANNEL="stable"
+PROFILE="core"
 
 usage() {
   cat <<USAGE
-Usage: $0 [--template PATH] [--channel stable|beta]
+Usage: $0 [--template PATH] [--channel stable|beta] [--profile core|power]
 USAGE
 }
 
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --channel)
       CHANNEL="$2"
+      shift 2
+      ;;
+    --profile)
+      PROFILE="$2"
       shift 2
       ;;
     -h|--help)
@@ -39,6 +44,11 @@ fi
 
 if [[ "${CHANNEL}" != "stable" && "${CHANNEL}" != "beta" ]]; then
   echo "Unsupported channel: ${CHANNEL}" >&2
+  exit 1
+fi
+
+if [[ "${PROFILE}" != "core" && "${PROFILE}" != "power" ]]; then
+  echo "Unsupported profile: ${PROFILE}" >&2
   exit 1
 fi
 
@@ -66,7 +76,12 @@ if [[ -z "${REPO_BASE}" ]]; then
   echo "Could not parse repository from ${TEMPLATE_PATH}" >&2
   exit 1
 fi
-NEXT_REPO="${REPO_BASE}:${CHANNEL}"
+if [[ "${PROFILE}" == "power" ]]; then
+  NEXT_TAG="power-${CHANNEL}"
+else
+  NEXT_TAG="${CHANNEL}"
+fi
+NEXT_REPO="${REPO_BASE}:${NEXT_TAG}"
 
 perl -0777 -i -pe 's|<Repository>[^<]+</Repository>|<Repository>'"${NEXT_REPO}"'</Repository>|g' "${TEMPLATE_PATH}"
 perl -0777 -i -pe 's|<ExtraParams>[^<]*</ExtraParams>|<ExtraParams>--pull always --gpus all --shm-size=2g --restart unless-stopped</ExtraParams>|g' "${TEMPLATE_PATH}"
@@ -83,6 +98,7 @@ fi
 
 echo "template_path=${TEMPLATE_PATH}"
 echo "channel=${CHANNEL}"
+echo "profile=${PROFILE}"
 echo "base_path=${BASE_PATH}"
 echo "workspace_path=${WORKSPACE_PATH}"
 echo "tailscale_state_path=${TS_STATE_PATH}"
