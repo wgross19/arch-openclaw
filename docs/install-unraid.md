@@ -28,11 +28,15 @@ Choose one template:
    - `/mnt/user/appdata/openclaw-cuda/workspace` -> `/home/node/.openclaw/workspace`
 5. Keep default network mode `bridge` and mapped UI port `18800 -> 18789`.
 6. Start the container.
+7. Leave the advanced Control UI origin settings at defaults unless you have a specific hardening requirement:
+   - `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS` defaults to `http://[IP]:[PORT:18800]`
+   - `OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK` defaults to `auto`
 
 Notes:
 - `core` is the default CA-oriented profile and is the recommended starting point.
 - `power` adds Homebrew + Playwright/Chromium + additional CLI tooling for better OpenClaw skill compatibility.
 - Both templates intentionally use the same config/workspace paths so you can switch profiles without migrating appdata. Do not run both profiles at the same time against the same paths.
+- In OpenClaw `v2026.2.23+`, non-loopback bind modes require a Control UI origin policy. This image writes the policy into `/home/node/.openclaw/openclaw.json` automatically on startup so first-run Unraid installs work without manual edits.
 
 ## First-Run Verification
 1. Check container logs for successful gateway start.
@@ -40,6 +44,7 @@ Notes:
    - `openclaw onboard`
    - Use the `openclaw` command (not `node dist/index.js`) so writes stay on the runtime user.
 3. Open UI:
+   - Unraid template WebUI link (default): `http://<UNRAID-IP>:<mapped-port>/` (for example `http://192.168.1.79:18800/`)
    - Native Tailscale integration enabled: `https://<container-hostname>.<tailnet>.ts.net/?token=YOUR_GATEWAY_TOKEN`
    - No Tailscale integration: use localhost tunneling from your client instead of plain LAN HTTP.
 4. If prompted for pairing in Control UI, complete the pairing flow once.
@@ -82,6 +87,15 @@ If `nvidia-smi` fails, check host NVIDIA plugin and driver compatibility.
 ```
 
 or use this repo script directly with your appdata paths.
+
+### Upgrade note for `v2026.2.23+` Control UI origin errors
+If an existing container fails with:
+- `non-loopback Control UI requires gateway.controlUi.allowedOrigins ...`
+
+then:
+1. Pull the updated image.
+2. Restart the container once.
+3. The entrypoint will patch/create `/home/node/.openclaw/openclaw.json` automatically (assuming the appdata mount is writable).
 
 ## Security Checklist
 - Keep `OPENCLAW_GATEWAY_TOKEN` secret.

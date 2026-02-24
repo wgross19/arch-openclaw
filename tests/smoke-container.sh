@@ -38,6 +38,48 @@ gateway_healthcheck_ok() {
   docker exec "${CONTAINER_NAME}" /usr/local/bin/healthcheck.sh >/dev/null 2>&1
 }
 
+container_running_named() {
+  local name="$1"
+  docker inspect -f '{{.State.Running}}' "${name}" 2>/dev/null | grep -q '^true$'
+}
+
+gateway_process_running_named() {
+  local name="$1"
+  docker exec "${name}" sh -lc 'ps -eo cmd | grep -E "(dist/index.js gateway|openclaw-gateway)" | grep -v grep >/dev/null'
+}
+
+gateway_healthcheck_ok_named() {
+  local name="$1"
+  docker exec "${name}" /usr/local/bin/healthcheck.sh >/dev/null 2>&1
+}
+
+wait_for_gateway_ready_named() {
+  local name="$1"
+  local port="$2"
+  local logs=""
+
+  for _ in {1..60}; do
+    if docker logs "${name}" 2>&1 | log_has "listening on ws://(0\\.0\\.0\\.0|127\\.0\\.0\\.1):${port}"; then
+      logs="$(docker logs "${name}" 2>&1 || true)"
+      printf '%s' "${logs}"
+      return 0
+    fi
+    if container_running_named "${name}" && (gateway_healthcheck_ok_named "${name}" || gateway_process_running_named "${name}"); then
+      logs="$(docker logs "${name}" 2>&1 || true)"
+      printf '%s' "${logs}"
+      return 0
+    fi
+    if ! container_running_named "${name}"; then
+      break
+    fi
+    sleep 1
+  done
+
+  logs="$(docker logs "${name}" 2>&1 || true)"
+  printf '%s' "${logs}"
+  return 1
+}
+
 # 1) Non-gateway commands should run without a token.
 docker run --rm "${IMAGE}" node --version >/dev/null
 docker run --rm "${IMAGE}" openclaw --help >/dev/null
@@ -91,7 +133,163 @@ if [[ "${code}" -ne 64 ]]; then
   exit 1
 fi
 
-# 3) Gateway startup with token should not need runtime UI build.
+# 3) LAN bind control-UI-origin policy scenarios.
+(
+  set -euo pipefail
+  tmpdir="$(mktemp -d)"
+  name="openclaw-origin-auto-$$"
+  token="$(openssl rand -hex 24)"
+  cleanup_scenario() {
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+    rm -rf "${tmpdir}"
+  }
+  trap cleanup_scenario EXIT
+
+  docker run -d --name "${name}" \
+    -e "OPENCLAW_GATEWAY_TOKEN=${token}" \
+    -e "OPENCLAW_GATEWAY_BIND=lan" \
+    -e "OPENCLAW_GATEWAY_PORT=18789" \
+    -v "${tmpdir}:/home/node/.openclaw" \
+    "${IMAGE}" >/dev/null
+
+  logs="$(wait_for_gateway_ready_named "${name}" 18789)" || {
+    echo "LAN bind auto-fallback scenario failed to start" >&2
+    docker inspect -f 'container_state={{.State.Status}} exit_code={{.State.ExitCode}} error={{.State.Error}}' "${name}" >&2 || true
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  }
+
+  if [[ ! -f "${tmpdir}/openclaw.json" ]]; then
+    echo "expected ${tmpdir}/openclaw.json to be created for LAN bind auto-fallback scenario" >&2
+    exit 1
+  fi
+  if ! rg -q '"dangerouslyAllowHostHeaderOriginFallback"[[:space:]]*:[[:space:]]*true' "${tmpdir}/openclaw.json"; then
+    echo "expected auto fallback to write gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true" >&2
+    cat "${tmpdir}/openclaw.json" >&2 || true
+    exit 1
+  fi
+  if ! printf '%s' "${logs}" | log_has "auto-enabled gateway\\.controlUi\\.dangerouslyAllowHostHeaderOriginFallback"; then
+    echo "expected LAN bind auto-fallback scenario logs to mention auto-enabled Host-header fallback" >&2
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  fi
+)
+
+(
+  set -euo pipefail
+  tmpdir="$(mktemp -d)"
+  name="openclaw-origin-explicit-$$"
+  token="$(openssl rand -hex 24)"
+  cleanup_scenario() {
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+    rm -rf "${tmpdir}"
+  }
+  trap cleanup_scenario EXIT
+
+  docker run -d --name "${name}" \
+    -e "OPENCLAW_GATEWAY_TOKEN=${token}" \
+    -e "OPENCLAW_GATEWAY_BIND=lan" \
+    -e "OPENCLAW_GATEWAY_PORT=18789" \
+    -e 'OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS=http://127.0.0.1:18800, http://localhost:18800' \
+    -v "${tmpdir}:/home/node/.openclaw" \
+    "${IMAGE}" >/dev/null
+
+  logs="$(wait_for_gateway_ready_named "${name}" 18789)" || {
+    echo "LAN bind explicit-origins scenario failed to start" >&2
+    docker inspect -f 'container_state={{.State.Status}} exit_code={{.State.ExitCode}} error={{.State.Error}}' "${name}" >&2 || true
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  }
+
+  if [[ ! -f "${tmpdir}/openclaw.json" ]]; then
+    echo "expected ${tmpdir}/openclaw.json to be created for explicit origins scenario" >&2
+    exit 1
+  fi
+  if ! rg -q '"allowedOrigins"' "${tmpdir}/openclaw.json"; then
+    echo "expected explicit origins scenario to write gateway.controlUi.allowedOrigins" >&2
+    cat "${tmpdir}/openclaw.json" >&2 || true
+    exit 1
+  fi
+  if ! rg -q 'http://127\.0\.0\.1:18800' "${tmpdir}/openclaw.json"; then
+    echo "expected explicit origins scenario to persist http://127.0.0.1:18800" >&2
+    cat "${tmpdir}/openclaw.json" >&2 || true
+    exit 1
+  fi
+  if ! rg -q 'http://localhost:18800' "${tmpdir}/openclaw.json"; then
+    echo "expected explicit origins scenario to persist http://localhost:18800" >&2
+    cat "${tmpdir}/openclaw.json" >&2 || true
+    exit 1
+  fi
+  if ! printf '%s' "${logs}" | log_has "Applied gateway\\.controlUi\\.allowedOrigins"; then
+    echo "expected explicit origins scenario logs to mention allowedOrigins patch" >&2
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  fi
+)
+
+set +e
+docker run --rm \
+  -e "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 24)" \
+  -e "OPENCLAW_GATEWAY_BIND=lan" \
+  -e "OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=maybe" \
+  "${IMAGE}" gateway >/tmp/openclaw-gateway-invalid-control-ui-fallback.log 2>&1
+code=$?
+set -e
+if [[ "${code}" -ne 64 ]]; then
+  echo "expected invalid control UI fallback env to fail with exit code 64 (got ${code})" >&2
+  cat /tmp/openclaw-gateway-invalid-control-ui-fallback.log >&2 || true
+  exit 1
+fi
+if ! log_has "Invalid OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK" </tmp/openclaw-gateway-invalid-control-ui-fallback.log; then
+  echo "expected invalid fallback env error message in logs" >&2
+  cat /tmp/openclaw-gateway-invalid-control-ui-fallback.log >&2 || true
+  exit 1
+fi
+
+(
+  set -euo pipefail
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "Skipping unwritable config mount smoke scenario on non-Linux host (Docker Desktop mount permissions are not strict)." >&2
+    exit 0
+  fi
+
+  tmpdir="$(mktemp -d)"
+  name="openclaw-origin-perms-$$"
+  chmod 755 "${tmpdir}"
+  cleanup_scenario() {
+    docker rm -f "${name}" >/dev/null 2>&1 || true
+    rm -rf "${tmpdir}"
+  }
+  trap cleanup_scenario EXIT
+
+  docker run -d --name "${name}" \
+    -e "OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 24)" \
+    -e "OPENCLAW_GATEWAY_BIND=lan" \
+    -e "OPENCLAW_CHOWN=false" \
+    -v "${tmpdir}:/home/node/.openclaw" \
+    "${IMAGE}" >/dev/null
+
+  for _ in {1..20}; do
+    if ! container_running_named "${name}"; then
+      break
+    fi
+    sleep 1
+  done
+
+  logs="$(docker logs "${name}" 2>&1 || true)"
+  if container_running_named "${name}"; then
+    echo "expected unwritable config mount scenario to fail, but container is still running" >&2
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  fi
+  if ! printf '%s' "${logs}" | log_has "Could not apply Control UI origin policy"; then
+    echo "expected clear Control UI origin policy permissions failure message" >&2
+    printf '%s\n' "${logs}" >&2
+    exit 1
+  fi
+)
+
+# 4) Gateway startup with token should not need runtime UI build.
 CONTAINER_NAME="openclaw-smoke-${PROFILE}-$$"
 TOKEN="$(openssl rand -hex 24)"
 

@@ -24,13 +24,27 @@ Actions:
 
 ## UI Not Reachable
 Symptoms:
-- Browser cannot open `http://UNRAID-IP:18789`.
+- Browser cannot open `http://UNRAID-IP:18800` (or your mapped host port).
 
 Actions:
 1. Confirm container is running.
 2. Confirm port mapping for `18789/tcp` in bridge mode.
 3. Check host firewall/network rules.
 4. If using Tailscale, verify host-level reachability to Unraid node.
+
+## Control UI Origin Policy Error (OpenClaw `v2026.2.23+`)
+Symptoms:
+- Logs show `Gateway failed to start: Error: non-loopback Control UI requires gateway.controlUi.allowedOrigins ...`
+
+Actions:
+1. Pull the latest image and restart the container (the entrypoint now auto-patches `openclaw.json` for one-shot Unraid startup).
+2. Confirm `/home/node/.openclaw` (host appdata mount) is writable by the runtime user:
+   - keep `OPENCLAW_CHOWN=auto` (recommended), or
+   - run once as root with `PUID`/`PGID` for permission alignment.
+3. Verify advanced template vars:
+   - `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS` (defaults to `http://[IP]:[PORT:18800]`)
+   - `OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=auto`
+4. For hardened setups, explicitly set all expected origins (IP, hostname, reverse proxy/Tailscale URL) and set fallback to `false`.
 
 ## Pairing Required / WebSocket 1008
 Symptoms:

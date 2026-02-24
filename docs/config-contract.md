@@ -7,6 +7,11 @@ Default container startup resolves to:
 node dist/index.js gateway --bind ${OPENCLAW_GATEWAY_BIND:-lan} --port ${OPENCLAW_GATEWAY_PORT:-18789} --allow-unconfigured
 ```
 
+When starting the gateway, the entrypoint may create/update `/home/node/.openclaw/openclaw.json` to apply runtime config patches for:
+- `gateway.trustedProxies` (from `OPENCLAW_TRUSTED_PROXIES`)
+- `gateway.controlUi.allowedOrigins`
+- `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback`
+
 ## Required Environment Variables
 | Variable | Required | Default | Notes |
 |---|---|---|---|
@@ -16,11 +21,13 @@ node dist/index.js gateway --bind ${OPENCLAW_GATEWAY_BIND:-lan} --port ${OPENCLA
 | Variable | Required | Default | Notes |
 |---|---|---|---|
 | `OPENCLAW_GATEWAY_PORT` | No | `18789` | Internal port gateway listens on. |
-| `OPENCLAW_GATEWAY_BIND` | No | `lan` | Gateway bind mode. Accepted values include `lan`, `loopback`, `tailnet`, `auto`, and `custom`. |
+| `OPENCLAW_GATEWAY_BIND` | No | `lan` | Gateway bind mode. Accepted values include `lan`, `loopback`, `tailnet`, `auto`, and `custom`. Non-loopback modes require a Control UI origin policy in OpenClaw `v2026.2.23+`; this image auto-handles first start by default. |
 | `BUN_INSTALL` | No | `/home/node/.bun` | Bun install/cache root used by baked Bun runtime. |
 | `TZ` | No | unset | Optional timezone override (template sets a concrete default). |
 | `NVIDIA_VISIBLE_DEVICES` | No | `all` | GPU visibility selection when GPU is enabled. |
 | `NVIDIA_DRIVER_CAPABILITIES` | No | `compute,utility` | NVIDIA driver capabilities exposed to the container. |
+| `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS` | No | template default: `http://[IP]:[PORT:18800]` | Comma-separated list or JSON array of browser origins written to `gateway.controlUi.allowedOrigins` in `openclaw.json`. Invalid/path-containing values are ignored with a warning. |
+| `OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK` | No | `auto` | `auto`, `true`, or `false`. Controls `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback`. In `auto`, the image enables fallback only when non-loopback startup would otherwise fail and no valid origins are configured. |
 
 ## Profile-Specific Runtime Defaults
 ### Core (default image)
@@ -76,6 +83,14 @@ All provider keys default to empty and are never hardcoded in template values.
 - Optional mapped port: `18790/tcp` only when bridge features are enabled.
 - Remote access over Tailscale is handled by the Unraid host, not this container.
 - When using Unraid native container Tailscale integration, the hook runs as root and then starts the original entrypoint.
+
+## Control UI Origin Policy (OpenClaw `v2026.2.23+`)
+- Fresh Unraid installs default to `OPENCLAW_GATEWAY_BIND=lan`.
+- The templates auto-seed `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS=http://[IP]:[PORT:18800]`.
+- If the template origin value is unresolved or hostname-based access is used, the image can auto-enable OpenClaw Host-header origin fallback (`OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=auto`) so first start still succeeds.
+- Recommended hardening:
+  - Set `OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS` to all expected access origins (IP, hostname, proxy FQDN).
+  - Set `OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=false`.
 
 ## Removed Legacy Surface (Breaking)
 - `TAILSCALE_AUTHKEY` environment variable.

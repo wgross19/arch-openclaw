@@ -48,6 +48,7 @@ docker run --rm -it \
 - `core` (default): CUDA + OpenClaw + QMD + Bun + ffmpeg + common CLI tooling (`git`, `jq`, `rg`, `tmux`, `python3`, `uv`, `gh`).
 - `power` (optional): everything in `core` plus Linuxbrew/Homebrew and Playwright/Chromium browser support.
 - Both profiles share the same config/workspace mount contract so operators can switch profiles without data migration.
+- For OpenClaw `v2026.2.23+`, the entrypoint auto-patches `openclaw.json` with Control UI origin policy settings on startup (including one-shot Host-header fallback in `auto` mode) so Unraid `lan`-bind installs start without manual config edits.
 
 ## Documentation
 - Architecture: `docs/architecture.md`
