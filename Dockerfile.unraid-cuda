@@ -3,6 +3,22 @@
 ARG CUDA_BASE_IMAGE=nvidia/cuda:13.1.1-runtime-ubuntu22.04@sha256:15ce727989c6937267361514a3ae2452ee13456eeb22cd170c52a854ac563cdc
 ARG NODE_VERSION=22.12.0
 ARG PNPM_VERSION=10.27.0
+ARG QMD_VERSION=1.0.7
+ARG QMD_URL_AMD64=https://registry.npmjs.org/@tobilu/qmd/-/qmd-1.0.7.tgz
+ARG QMD_SHA256_AMD64=c00f6b6b33486faeaecc0b7eb40ce148f2b66d77023527a4541fdefdfc5525e9
+ARG BUN_VERSION=1.3.9
+ARG BUN_URL_AMD64=https://github.com/oven-sh/bun/releases/download/bun-v1.3.9/bun-linux-x64.zip
+ARG BUN_SHA256_AMD64=4680e80e44e32aa718560ceae85d22ecfbf2efb8f3641782e35e4b7efd65a1aa
+ARG UV_VERSION=0.10.5
+ARG UV_URL_AMD64=https://github.com/astral-sh/uv/releases/download/0.10.5/uv-x86_64-unknown-linux-gnu.tar.gz
+ARG UV_SHA256_AMD64=bcb127225873baa5ebd23cf09f29996cc97c1091830c9933e2e320bf1429a584
+ARG GH_VERSION=2.87.3
+ARG GH_URL_AMD64=https://github.com/cli/cli/releases/download/v2.87.3/gh_2.87.3_linux_amd64.tar.gz
+ARG GH_SHA256_AMD64=c6e5537631fca45f277ef405ce8751d139b491e9402cc20891a003525a8773b2
+ARG PLAYWRIGHT_VERSION=1.58.2
+ARG HOMEBREW_BREW_COMMIT=49a172a9e41fe30cc7a1779f25ba604936d42049
+ARG HOMEBREW_BREW_URL=https://github.com/Homebrew/brew/archive/49a172a9e41fe30cc7a1779f25ba604936d42049.tar.gz
+ARG HOMEBREW_BREW_SHA256=a5237ed4a0f874adcdc590e833b5c93c78a0cf6353e5e57f013d347f882a032b
 ARG OPENCLAW_SOURCE_REPO=https://github.com/openclaw/openclaw
 
 FROM ${CUDA_BASE_IMAGE} AS node-base
@@ -37,6 +53,79 @@ RUN case "${TARGETARCH}" in \
 RUN npm install -g "pnpm@${PNPM_VERSION}" \
   && pnpm --version
 
+FROM node-base AS tooling-fetcher
+
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG BUN_VERSION
+ARG BUN_URL_AMD64
+ARG BUN_SHA256_AMD64
+ARG UV_VERSION
+ARG UV_URL_AMD64
+ARG UV_SHA256_AMD64
+ARG GH_VERSION
+ARG GH_URL_AMD64
+ARG GH_SHA256_AMD64
+
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN case "${TARGETARCH}" in \
+    amd64) \
+      BUN_URL="${BUN_URL_AMD64}"; BUN_SHA256="${BUN_SHA256_AMD64}"; \
+      UV_URL="${UV_URL_AMD64}"; UV_SHA256="${UV_SHA256_AMD64}"; \
+      GH_URL="${GH_URL_AMD64}"; GH_SHA256="${GH_SHA256_AMD64}"; \
+      GH_DIR="gh_${GH_VERSION}_linux_amd64"; \
+      ;; \
+    *) echo "Unsupported TARGETARCH for tooling-fetcher: ${TARGETARCH}" && exit 1 ;; \
+  esac \
+  && mkdir -p /opt/tooling/bin /tmp/tooling \
+  && curl -fsSL "${BUN_URL}" -o /tmp/tooling/bun.zip \
+  && echo "${BUN_SHA256}  /tmp/tooling/bun.zip" | sha256sum -c - \
+  && unzip -q /tmp/tooling/bun.zip -d /tmp/tooling/bun \
+  && install -m 0755 /tmp/tooling/bun/bun-linux-x64/bun /opt/tooling/bin/bun \
+  && curl -fsSL "${UV_URL}" -o /tmp/tooling/uv.tar.gz \
+  && echo "${UV_SHA256}  /tmp/tooling/uv.tar.gz" | sha256sum -c - \
+  && tar -xzf /tmp/tooling/uv.tar.gz -C /tmp/tooling \
+  && install -m 0755 /tmp/tooling/uv-x86_64-unknown-linux-gnu/uv /opt/tooling/bin/uv \
+  && if [[ -f /tmp/tooling/uv-x86_64-unknown-linux-gnu/uvx ]]; then install -m 0755 /tmp/tooling/uv-x86_64-unknown-linux-gnu/uvx /opt/tooling/bin/uvx; fi \
+  && curl -fsSL "${GH_URL}" -o /tmp/tooling/gh.tar.gz \
+  && echo "${GH_SHA256}  /tmp/tooling/gh.tar.gz" | sha256sum -c - \
+  && tar -xzf /tmp/tooling/gh.tar.gz -C /tmp/tooling \
+  && install -m 0755 "/tmp/tooling/${GH_DIR}/bin/gh" /opt/tooling/bin/gh \
+  && /opt/tooling/bin/bun --version \
+  && if [[ "${BUILDPLATFORM}" == "${TARGETPLATFORM}" ]]; then /opt/tooling/bin/uv --version; else echo "Skipping uv execution check during cross-build (${BUILDPLATFORM} -> ${TARGETPLATFORM})"; fi \
+  && /opt/tooling/bin/gh --version
+
+FROM node-base AS qmd-builder
+
+ARG TARGETARCH
+ARG QMD_VERSION
+ARG QMD_URL_AMD64
+ARG QMD_SHA256_AMD64
+
+RUN case "${TARGETARCH}" in \
+    amd64) ;; \
+    *) echo "QMD v1 is only supported for linux/amd64 (got ${TARGETARCH})" && exit 1 ;; \
+  esac
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    python3 \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL "${QMD_URL_AMD64}" -o /tmp/qmd.tgz \
+  && echo "${QMD_SHA256_AMD64}  /tmp/qmd.tgz" | sha256sum -c - \
+  && npm install -g --omit=dev /tmp/qmd.tgz \
+  && rm -f /tmp/qmd.tgz \
+  && test "$(node -p "require('/usr/local/lib/node_modules/@tobilu/qmd/package.json').version")" = "${QMD_VERSION}" \
+  && qmd --version \
+  && npm cache clean --force
+
 FROM node-base AS builder
 
 ARG OPENCLAW_REF
@@ -44,7 +133,7 @@ ARG OPENCLAW_SOURCE_REPO
 ENV CI=true
 
 RUN test -n "${OPENCLAW_REF}" || (echo "OPENCLAW_REF must be set to an upstream OpenClaw git tag." && exit 1)
-RUN [[ "${OPENCLAW_REF}" =~ ^v[0-9] ]] || (echo "OPENCLAW_REF must look like a versioned tag (example: v2026.2.17)." && exit 1)
+RUN [[ "${OPENCLAW_REF}" =~ ^v[0-9] ]] || (echo "OPENCLAW_REF must look like a versioned tag (example: v2026.2.23)." && exit 1)
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -64,11 +153,12 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 RUN pnpm ui:build
 
-FROM ${CUDA_BASE_IMAGE} AS runtime
+FROM ${CUDA_BASE_IMAGE} AS runtime-base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG OPENCLAW_REF
+ARG QMD_VERSION
 
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_ENV=production \
@@ -86,15 +176,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /tmp && chmod 1777 /tmp
 
 COPY --from=node-base /usr/local /usr/local
+COPY --from=qmd-builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN groupadd --gid 1000 node \
   && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash node \
   && mkdir -p /app \
       /home/node/.openclaw/workspace \
       /home/node/.cache/qmd \
+      /home/node/.cache/ms-playwright \
       /home/node/.bun \
       /home/linuxbrew/.linuxbrew \
   && chown -R node:node /app /home/node /home/linuxbrew \
+  && ln -sf ../lib/node_modules/@tobilu/qmd/qmd /usr/local/bin/qmd \
+  && test "$(node -p "require('/usr/local/lib/node_modules/@tobilu/qmd/package.json').version")" = "${QMD_VERSION}" \
+  && gosu node:node qmd --version >/dev/null \
   && printf '%s\n' \
     '#!/usr/bin/env bash' \
     'set -euo pipefail' \
@@ -120,3 +215,91 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 CMD ["/us
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 CMD ["gateway"]
+
+FROM runtime-base AS runtime-core
+
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETARCH
+
+ENV BUN_INSTALL=/home/node/.bun
+
+COPY --from=tooling-fetcher /opt/tooling/bin/bun /usr/local/bin/bun
+COPY --from=tooling-fetcher /opt/tooling/bin/uv /usr/local/bin/uv
+COPY --from=tooling-fetcher /opt/tooling/bin/gh /usr/local/bin/gh
+COPY --from=tooling-fetcher /opt/tooling/bin/uvx /usr/local/bin/uvx
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    git \
+    jq \
+    python3 \
+    ripgrep \
+    tmux \
+  && rm -rf /var/lib/apt/lists/* \
+  && bun --version \
+  && if [[ "${BUILDPLATFORM}" == "${TARGETPLATFORM}" ]]; then uv --version; else echo "Skipping uv execution check during cross-build (${BUILDPLATFORM} -> ${TARGETPLATFORM})"; fi \
+  && gh --version \
+  && ffmpeg -version >/dev/null \
+  && ffprobe -version >/dev/null \
+  && rg --version >/dev/null \
+  && jq --version >/dev/null \
+  && tmux -V >/dev/null \
+  && python3 --version >/dev/null \
+  && gosu node:node bun --version >/dev/null \
+  && if [[ "${BUILDPLATFORM}" == "${TARGETPLATFORM}" ]]; then gosu node:node uv --version >/dev/null; else echo "Skipping non-root uv execution check during cross-build (${BUILDPLATFORM} -> ${TARGETPLATFORM})"; fi \
+  && gosu node:node gh --version >/dev/null
+
+FROM runtime-core AS runtime-power
+
+ARG PLAYWRIGHT_VERSION
+ARG HOMEBREW_BREW_COMMIT
+ARG HOMEBREW_BREW_URL
+ARG HOMEBREW_BREW_SHA256
+
+ENV HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew \
+    HOMEBREW_REPOSITORY=/home/linuxbrew/.linuxbrew/Homebrew \
+    HOMEBREW_NO_AUTO_UPDATE=1 \
+    HOMEBREW_NO_INSTALL_CLEANUP=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+    PATH=/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    file \
+    procps \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL "${HOMEBREW_BREW_URL}" -o /tmp/homebrew-brew.tar.gz \
+  && echo "${HOMEBREW_BREW_SHA256}  /tmp/homebrew-brew.tar.gz" | sha256sum -c - \
+  && mkdir -p /home/linuxbrew/.linuxbrew/Homebrew \
+      /home/linuxbrew/.linuxbrew/bin \
+      /home/linuxbrew/.linuxbrew/etc \
+      /home/linuxbrew/.linuxbrew/include \
+      /home/linuxbrew/.linuxbrew/lib \
+      /home/linuxbrew/.linuxbrew/opt \
+      /home/linuxbrew/.linuxbrew/sbin \
+      /home/linuxbrew/.linuxbrew/share \
+      /home/linuxbrew/.linuxbrew/var \
+      /home/linuxbrew/.linuxbrew/Cellar \
+      /home/linuxbrew/.linuxbrew/Caskroom \
+  && tar -xzf /tmp/homebrew-brew.tar.gz -C /home/linuxbrew/.linuxbrew/Homebrew --strip-components=1 \
+  && rm -f /tmp/homebrew-brew.tar.gz \
+  && ln -sf ../Homebrew/bin/brew /home/linuxbrew/.linuxbrew/bin/brew \
+  && chown -R node:node /home/linuxbrew \
+  && gosu node:node /home/linuxbrew/.linuxbrew/bin/brew --version >/dev/null
+
+RUN if [[ ! -f /app/node_modules/playwright/cli.js ]]; then \
+      npm install -g --omit=dev "playwright@${PLAYWRIGHT_VERSION}"; \
+      mkdir -p /app/node_modules; \
+      ln -sf /usr/local/lib/node_modules/playwright /app/node_modules/playwright; \
+    fi \
+  && mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}" \
+  && chown -R node:node /home/node/.cache \
+  && (PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" node /app/node_modules/playwright/cli.js install --with-deps chromium || \
+      PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH}" node /app/node_modules/playwright/cli.js install chromium) \
+  && test -d "${PLAYWRIGHT_BROWSERS_PATH}" \
+  && find "${PLAYWRIGHT_BROWSERS_PATH}" -maxdepth 4 -type f | rg -q 'chrome|chromium' \
+  && chown -R node:node "${PLAYWRIGHT_BROWSERS_PATH}" \
+  && gosu node:node node /app/node_modules/playwright/cli.js --version >/dev/null
+
+FROM runtime-core AS runtime

@@ -15,6 +15,7 @@ ensure_dirs() {
   mkdir -p "${CONFIG_DIR}" \
     "${WORKSPACE_DIR}" \
     "${APP_HOME}/.cache/qmd" \
+    "${APP_HOME}/.cache/ms-playwright" \
     "${APP_HOME}/.bun" \
     "/home/linuxbrew/.linuxbrew"
 }
