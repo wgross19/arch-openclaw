@@ -103,6 +103,7 @@ trap cleanup EXIT
 docker run -d --name "${CONTAINER_NAME}" \
   -e "OPENCLAW_GATEWAY_TOKEN=${TOKEN}" \
   -e "OPENCLAW_GATEWAY_PORT=18789" \
+  -e "OPENCLAW_GATEWAY_BIND=loopback" \
   "${IMAGE}" >/dev/null
 
 for _ in {1..60}; do
