@@ -17,9 +17,22 @@ node dist/index.js gateway --bind ${OPENCLAW_GATEWAY_BIND:-lan} --port ${OPENCLA
 |---|---|---|---|
 | `OPENCLAW_GATEWAY_PORT` | No | `18789` | Internal port gateway listens on. |
 | `OPENCLAW_GATEWAY_BIND` | No | `lan` | Gateway bind mode. Accepted values include `lan`, `loopback`, `tailnet`, `auto`, and `custom`. |
+| `BUN_INSTALL` | No | `/home/node/.bun` | Bun install/cache root used by baked Bun runtime. |
 | `TZ` | No | unset | Optional timezone override (template sets a concrete default). |
 | `NVIDIA_VISIBLE_DEVICES` | No | `all` | GPU visibility selection when GPU is enabled. |
 | `NVIDIA_DRIVER_CAPABILITIES` | No | `compute,utility` | NVIDIA driver capabilities exposed to the container. |
+
+## Profile-Specific Runtime Defaults
+### Core (default image)
+- Baked tooling on PATH: `bun`, `ffmpeg`, `ffprobe`, `git`, `jq`, `rg`, `tmux`, `python3`, `uv`, `gh`, `qmd`
+- Gateway runtime remains Node-based
+
+### Power (optional image)
+- Adds Linuxbrew/Homebrew at `/home/linuxbrew/.linuxbrew`
+- Sets `HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew`
+- Sets `HOMEBREW_NO_AUTO_UPDATE=1`
+- Sets `HOMEBREW_NO_INSTALL_CLEANUP=1`
+- Sets `PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright`
 
 ## Provider API Keys (Optional)
 - `ANTHROPIC_API_KEY`
@@ -55,6 +68,7 @@ All provider keys default to empty and are never hardcoded in template values.
 | `/mnt/user/appdata/openclaw/qmd-cache` | `/home/node/.cache/qmd` | `rw` | QMD/model cache persistence |
 | `/mnt/user/appdata/openclaw/bun` | `/home/node/.bun` | `rw` | Bun persistence for advanced workflows |
 | `/mnt/user/appdata/openclaw/homebrew` | `/home/linuxbrew/.linuxbrew` | `rw` | Homebrew persistence for advanced workflows |
+| `/mnt/user/appdata/openclaw/playwright-cache` | `/home/node/.cache/ms-playwright` | `rw` | Playwright/Chromium browser cache persistence (`power` profile) |
 
 ## Network Contract
 - Default mode: `bridge`.

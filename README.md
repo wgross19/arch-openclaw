@@ -7,19 +7,31 @@ Dedicated repository for a hardened, CA-ready Unraid distribution of OpenClaw wi
 - `docker/entrypoint.sh`: startup and permission handling.
 - `docker/healthcheck.sh`: gateway liveness check.
 - `templates/openclaw-unraid-cuda.xml`: Unraid Community Apps template.
+- `templates/openclaw-unraid-cuda-power.xml`: optional Unraid template for the power profile image.
 - `scripts/migrate-legacy-openclaw.sh`: migration and rollback helper.
 - `scripts/unraid-debug-cycle.sh`: one-shot Unraid debug capture + onboarding runner.
 - `docs/`: architecture, install, migration, testing, release, and tracking docs.
 - `.github/workflows/build-test-release.yml`: CI build/test/scan/publish pipeline.
 
 ## Build Locally
-Set an upstream tag in `/Users/wfg/Projects/arch-openclaw/.openclaw-ref` (replace `SET_ME_TO_OPENCLAW_TAG`) or pass `OPENCLAW_REF` directly.
+Set an upstream tag in `/Users/wfg/Projects/arch-openclaw/.openclaw-ref` (currently pinned to `v2026.2.23`) or pass `OPENCLAW_REF` directly.
 
 ```bash
 docker build \
   -f Dockerfile.unraid-cuda \
+  --target runtime-core \
   --build-arg OPENCLAW_REF=<upstream-tag> \
-  -t openclaw-unraid-cuda:local .
+  -t openclaw-unraid-cuda:core-local .
+```
+
+Build the optional power profile (Homebrew + Playwright/Chromium + extra tooling):
+
+```bash
+docker build \
+  -f Dockerfile.unraid-cuda \
+  --target runtime-power \
+  --build-arg OPENCLAW_REF=<upstream-tag> \
+  -t openclaw-unraid-cuda:power-local .
 ```
 
 ## Run Locally
@@ -29,8 +41,13 @@ docker run --rm -it \
   -e OPENCLAW_GATEWAY_TOKEN=changeme \
   -v /tmp/openclaw-config:/home/node/.openclaw \
   -v /tmp/openclaw-workspace:/home/node/.openclaw/workspace \
-  openclaw-unraid-cuda:local
+  openclaw-unraid-cuda:core-local
 ```
+
+## Profiles
+- `core` (default): CUDA + OpenClaw + QMD + Bun + ffmpeg + common CLI tooling (`git`, `jq`, `rg`, `tmux`, `python3`, `uv`, `gh`).
+- `power` (optional): everything in `core` plus Linuxbrew/Homebrew and Playwright/Chromium browser support.
+- Both profiles share the same config/workspace mount contract so operators can switch profiles without data migration.
 
 ## Documentation
 - Architecture: `docs/architecture.md`

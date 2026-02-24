@@ -12,6 +12,7 @@ The existing Unraid deployment model for OpenClaw relies on mutable startup beha
 
 ### Goals
 - Deliver a production-ready Unraid image with CUDA runtime libraries pinned in-image.
+- Provide a profile split with a hardened default (`core`) and an optional full-featured image (`power`) for advanced skill workflows.
 - Use Unraid host Tailscale integration only (no in-container VPN daemon).
 - Provide a CA-ready template with secure defaults and optional advanced mounts.
 - Support clean operational lifecycle: install, restart, recreate, and upgrade.
@@ -19,6 +20,8 @@ The existing Unraid deployment model for OpenClaw relies on mutable startup beha
 ### Success Criteria
 - Container starts without runtime package installers.
 - Default runtime is non-root and runs with bridge networking.
+- Core image remains backward-compatible with existing template/tag expectations.
+- Power image adds optional Homebrew + Playwright/Chromium support without changing config/workspace paths.
 - OpenClaw state persists across redeployments using documented mounts.
 - GPU-enabled hosts expose CUDA runtime successfully with `--gpus all`.
 - Template contains no hardcoded API keys or secrets.
@@ -48,6 +51,12 @@ flowchart LR
 - Gateway token is required and never shipped with defaults.
 - Bridge networking with explicit port mapping is the default boundary.
 - Optional root execution is only for one-time ownership repair and is not default.
+- Heavier skill tooling (Homebrew, Playwright browsers) is isolated to the optional `power` profile.
+
+## Runtime Profiles
+- `core` (default): CUDA runtime, OpenClaw, QMD, Bun, ffmpeg, and common CLI tooling.
+- `power` (optional): `core` plus Linuxbrew/Homebrew and preinstalled Playwright/Chromium support.
+- Both profiles use the same config/workspace paths and entrypoint contract.
 
 ## Compatibility Matrix Baseline
 | Component | Baseline |
@@ -55,7 +64,8 @@ flowchart LR
 | Unraid | 6.12+ |
 | GPU support | NVIDIA only |
 | CUDA runtime | 13.1 (`nvidia/cuda:13.1.1-runtime-ubuntu22.04`) |
-| OpenClaw source | Pinned upstream git tags |
+| OpenClaw source | Pinned upstream git tags (currently `v2026.2.23`) |
+| Image profiles | `core` (default), `power` (optional) |
 | Network mode | Bridge + explicit port mapping |
 | Tailscale | Host-integrated only |
 

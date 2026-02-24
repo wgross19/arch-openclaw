@@ -64,6 +64,22 @@ Actions:
    - `NVIDIA_DRIVER_CAPABILITIES=compute,utility`
 4. Recheck host driver/CUDA compatibility.
 
+## Power Profile: Homebrew or Playwright Issues
+Symptoms:
+- `brew: command not found` in the power image.
+- Browser tool actions fail and logs mention missing Playwright/Chromium browser binaries.
+
+Actions:
+1. Confirm you are running the `power` image/template (`openclaw-unraid-cuda:power-*` tags).
+2. Verify Homebrew:
+   - `command -v brew`
+   - `brew --version`
+3. Verify Playwright cache path:
+   - `echo \"$PLAYWRIGHT_BROWSERS_PATH\"` (should be `/home/node/.cache/ms-playwright`)
+   - `find /home/node/.cache/ms-playwright -maxdepth 5 -type f | grep -E 'chrome|chromium'`
+4. If using a mount for `/home/node/.cache/ms-playwright`, confirm it is writable by the container runtime user.
+5. If Playwright endpoints still report unavailable support, confirm the current OpenClaw build includes the expected browser dependencies and review power-profile release notes for known limitations.
+
 ## Migration Problems
 Symptoms:
 - Missing workspace or old config behavior after migration.

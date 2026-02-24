@@ -13,6 +13,7 @@
 3. Workspace persistence across container restart.
 4. Container recreation with same mounts preserves state.
 5. Optional provider keys absent does not break startup.
+6. Profile switch (`core` -> `power` or `power` -> `core`) with same config/workspace mounts preserves state and pairing.
 
 ## Permission Scenarios
 1. Default non-root startup can read/write config and workspace mounts.
@@ -24,6 +25,11 @@
 2. CUDA runtime libs are present without runtime package install.
 3. OpenClaw GPU-related workloads run on GPU-enabled host.
 4. CPU-only hosts do not crash; workloads degrade gracefully.
+
+## Profile / Tooling Scenarios
+1. `core` image: `bun`, `ffmpeg/ffprobe`, `git`, `jq`, `rg`, `tmux`, `python3`, `uv`, `gh`, and `qmd` are on PATH.
+2. `power` image: all `core` tooling plus `brew` and Playwright/Chromium browser cache availability.
+3. `power` image: `/home/node/.cache/ms-playwright` writes land in mounted path when configured.
 
 ## Network and Tailscale Scenarios
 1. Bridge mode port map serves UI on `18789`.
@@ -44,11 +50,13 @@
 ## Release Gates
 ### Beta Gate
 - All E1/E3 required scenarios pass.
+- Core and power profile smoke checks pass in CI.
 - No P0 defects open.
 - Migration + rollback tested at least once.
 
 ### Stable Gate
 - All required scenarios pass in E1/E2/E3.
+- Core and power profile validations complete (including power browser/tooling checks).
 - No P0/P1 defects open.
 - Documentation and template contract tests pass.
 

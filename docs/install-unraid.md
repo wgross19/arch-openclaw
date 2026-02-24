@@ -13,8 +13,12 @@ openssl rand -hex 24
 ```
 
 ## Install via Template URL (Beta Channel)
+Choose one template:
+1. `core` (recommended default): `https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml`
+2. `power` (advanced tooling): `https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda-power.xml`
+
 1. In Unraid, open Docker templates and add template URL:
-   - `https://raw.githubusercontent.com/wgross19/arch-openclaw/main/templates/openclaw-unraid-cuda.xml`
+   - Use the `core` or `power` template URL above.
 2. Create container from template.
 3. Set required values:
    - `OPENCLAW_GATEWAY_TOKEN`
@@ -24,6 +28,11 @@ openssl rand -hex 24
    - `/mnt/user/appdata/openclaw-cuda/workspace` -> `/home/node/.openclaw/workspace`
 5. Keep default network mode `bridge` and mapped UI port `18800 -> 18789`.
 6. Start the container.
+
+Notes:
+- `core` is the default CA-oriented profile and is the recommended starting point.
+- `power` adds Homebrew + Playwright/Chromium + additional CLI tooling for better OpenClaw skill compatibility.
+- Both templates intentionally use the same config/workspace paths so you can switch profiles without migrating appdata. Do not run both profiles at the same time against the same paths.
 
 ## First-Run Verification
 1. Check container logs for successful gateway start.
@@ -38,6 +47,9 @@ openssl rand -hex 24
    - Create a file under workspace and confirm it survives container restart.
 6. Verify model provider:
    - Run a simple model request in UI.
+7. Optional tool checks:
+   - `core`: `bun --version`, `ffmpeg -version`, `gh --version`
+   - `power`: `brew --version` and confirm `/home/node/.cache/ms-playwright` is writable (if mounted)
 
 ## GPU Enablement Verification
 1. Ensure template includes `--gpus all`.
