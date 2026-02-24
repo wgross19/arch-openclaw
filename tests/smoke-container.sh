@@ -146,7 +146,7 @@ fi
   cleanup_scenario() {
     docker rm -f "${name}" >/dev/null 2>&1 || true
     chmod -R u+w "${tmpdir}" >/dev/null 2>&1 || true
-    rm -rf "${tmpdir}"
+    rm -rf "${tmpdir}" >/dev/null 2>&1 || true
   }
   trap cleanup_scenario EXIT
 
@@ -169,7 +169,7 @@ fi
     echo "expected ${tmpdir}/openclaw.json to be created for LAN bind auto-fallback scenario" >&2
     exit 1
   fi
-  if ! rg -q '"dangerouslyAllowHostHeaderOriginFallback"[[:space:]]*:[[:space:]]*true' "${tmpdir}/openclaw.json"; then
+  if ! log_has '"dangerouslyAllowHostHeaderOriginFallback"[[:space:]]*:[[:space:]]*true' <"${tmpdir}/openclaw.json"; then
     echo "expected auto fallback to write gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true" >&2
     cat "${tmpdir}/openclaw.json" >&2 || true
     exit 1
@@ -190,7 +190,7 @@ fi
   cleanup_scenario() {
     docker rm -f "${name}" >/dev/null 2>&1 || true
     chmod -R u+w "${tmpdir}" >/dev/null 2>&1 || true
-    rm -rf "${tmpdir}"
+    rm -rf "${tmpdir}" >/dev/null 2>&1 || true
   }
   trap cleanup_scenario EXIT
 
@@ -214,17 +214,17 @@ fi
     echo "expected ${tmpdir}/openclaw.json to be created for explicit origins scenario" >&2
     exit 1
   fi
-  if ! rg -q '"allowedOrigins"' "${tmpdir}/openclaw.json"; then
+  if ! log_has '"allowedOrigins"' <"${tmpdir}/openclaw.json"; then
     echo "expected explicit origins scenario to write gateway.controlUi.allowedOrigins" >&2
     cat "${tmpdir}/openclaw.json" >&2 || true
     exit 1
   fi
-  if ! rg -q 'http://127\.0\.0\.1:18800' "${tmpdir}/openclaw.json"; then
+  if ! log_has 'http://127\.0\.0\.1:18800' <"${tmpdir}/openclaw.json"; then
     echo "expected explicit origins scenario to persist http://127.0.0.1:18800" >&2
     cat "${tmpdir}/openclaw.json" >&2 || true
     exit 1
   fi
-  if ! rg -q 'http://localhost:18800' "${tmpdir}/openclaw.json"; then
+  if ! log_has 'http://localhost:18800' <"${tmpdir}/openclaw.json"; then
     echo "expected explicit origins scenario to persist http://localhost:18800" >&2
     cat "${tmpdir}/openclaw.json" >&2 || true
     exit 1
