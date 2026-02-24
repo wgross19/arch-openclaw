@@ -58,13 +58,16 @@ wait_for_gateway_ready_named() {
   local port="$2"
   local logs=""
 
-  for _ in {1..60}; do
+  for _ in {1..180}; do
     if docker logs "${name}" 2>&1 | log_has "listening on ws://(0\\.0\\.0\\.0|127\\.0\\.0\\.1):${port}"; then
       logs="$(docker logs "${name}" 2>&1 || true)"
       printf '%s' "${logs}"
       return 0
     fi
-    if container_running_named "${name}" && (gateway_healthcheck_ok_named "${name}" || gateway_process_running_named "${name}"); then
+    # A running gateway process is not sufficient here: OpenClaw can stay
+    # alive while repeatedly retrying startup (for example on Control UI
+    # origin policy errors). Require an actual healthcheck or listening log.
+    if container_running_named "${name}" && gateway_healthcheck_ok_named "${name}"; then
       logs="$(docker logs "${name}" 2>&1 || true)"
       printf '%s' "${logs}"
       return 0
@@ -137,10 +140,12 @@ fi
 (
   set -euo pipefail
   tmpdir="$(mktemp -d)"
+  chmod 777 "${tmpdir}"
   name="openclaw-origin-auto-$$"
   token="$(openssl rand -hex 24)"
   cleanup_scenario() {
     docker rm -f "${name}" >/dev/null 2>&1 || true
+    chmod -R u+w "${tmpdir}" >/dev/null 2>&1 || true
     rm -rf "${tmpdir}"
   }
   trap cleanup_scenario EXIT
@@ -149,6 +154,7 @@ fi
     -e "OPENCLAW_GATEWAY_TOKEN=${token}" \
     -e "OPENCLAW_GATEWAY_BIND=lan" \
     -e "OPENCLAW_GATEWAY_PORT=18789" \
+    -e "OPENCLAW_CHOWN=false" \
     -v "${tmpdir}:/home/node/.openclaw" \
     "${IMAGE}" >/dev/null
 
@@ -178,10 +184,12 @@ fi
 (
   set -euo pipefail
   tmpdir="$(mktemp -d)"
+  chmod 777 "${tmpdir}"
   name="openclaw-origin-explicit-$$"
   token="$(openssl rand -hex 24)"
   cleanup_scenario() {
     docker rm -f "${name}" >/dev/null 2>&1 || true
+    chmod -R u+w "${tmpdir}" >/dev/null 2>&1 || true
     rm -rf "${tmpdir}"
   }
   trap cleanup_scenario EXIT
@@ -190,6 +198,7 @@ fi
     -e "OPENCLAW_GATEWAY_TOKEN=${token}" \
     -e "OPENCLAW_GATEWAY_BIND=lan" \
     -e "OPENCLAW_GATEWAY_PORT=18789" \
+    -e "OPENCLAW_CHOWN=false" \
     -e 'OPENCLAW_CONTROL_UI_ALLOWED_ORIGINS=http://127.0.0.1:18800, http://localhost:18800' \
     -v "${tmpdir}:/home/node/.openclaw" \
     "${IMAGE}" >/dev/null
