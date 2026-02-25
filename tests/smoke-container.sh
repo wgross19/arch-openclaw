@@ -85,6 +85,7 @@ wait_for_gateway_ready_named() {
 
 # 1) Non-gateway commands should run without a token.
 docker run --rm "${IMAGE}" node --version >/dev/null
+docker run --rm "${IMAGE}" node -e "import('node:sqlite').then(({ DatabaseSync })=>{ const db = new DatabaseSync(':memory:'); db.exec('create virtual table t using fts5(x)'); process.exit(0); }).catch((e)=>{console.error(e);process.exit(1)})" >/dev/null
 docker run --rm "${IMAGE}" openclaw --help >/dev/null
 docker run --rm "${IMAGE}" qmd --version >/dev/null
 docker run --rm -e "ARCH_OPENCLAW_SMOKE_SKIP_UV_CHECKS=${SKIP_UV_CHECKS}" "${IMAGE}" sh -lc '

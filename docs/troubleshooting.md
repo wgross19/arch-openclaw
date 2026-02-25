@@ -46,6 +46,24 @@ Actions:
    - `OPENCLAW_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=auto`
 4. For hardened setups, explicitly set all expected origins (IP, hostname, reverse proxy/Tailscale URL) and set fallback to `false`.
 
+## Memory Reports SQLite/FTS Unavailable (`node:sqlite`, `fts5`)
+Symptoms:
+- `openclaw memory status --deep` reports SQLite support unavailable / missing `node:sqlite`.
+- `node -e "import('node:sqlite')..."` fails with `No such built-in module: node:sqlite`.
+- `openclaw memory status --deep` reports `FTS unavailable: no such module: fts5`.
+
+Actions:
+1. Confirm the container runtime Node version:
+   - `node --version`
+2. Validate built-in SQLite support directly:
+   - `node -e "import('node:sqlite').then(()=>console.log('node:sqlite OK'))"`
+3. Validate SQLite FTS5 support directly:
+   - `node -e "import('node:sqlite').then(({ DatabaseSync })=>{ const db=new DatabaseSync(':memory:'); db.exec('create virtual table t using fts5(x)'); console.log('FTS5 OK'); })"`
+4. Pull a current image build if running an older image or a build without shared-SQLite/FTS5-enabled Node:
+   - `docker pull ghcr.io/wgross19/openclaw-unraid-cuda:<tag>`
+5. Restart the container and re-check `openclaw memory status --deep`.
+6. If SQLite/FTS is available but memory search still reports unavailable, configure an embedding provider (API key or local provider/model path).
+
 ## Pairing Required / WebSocket 1008
 Symptoms:
 - Control UI shows `disconnected (1008): pairing required`.

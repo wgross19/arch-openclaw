@@ -26,6 +26,7 @@
   - appdata paths `/mnt/user/appdata/openclaw-cuda` + `/workspace`
   - updated workspace description text
   - tailscale state path `/mnt/user/appdata/openclaw-cuda/tailscale-state`
+- Unblocked OpenClaw memory runtime prerequisites by pinning Node `22.13.1`, source-building Node with shared system SQLite (`--shared-sqlite`), and adding `node:sqlite` + FTS5 build/smoke validation.
 - Tagged repo with `v2026.2.17` (aligned with OpenClaw base ref) and removed prior `v2026` tag.
 
 ## In Progress

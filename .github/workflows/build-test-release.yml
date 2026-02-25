@@ -165,6 +165,7 @@ jobs:
 
   build-test-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs: resolve-build-config
     if: needs.resolve-build-config.outputs.openclaw_ref != ''
     strategy:
@@ -188,6 +189,8 @@ jobs:
           load: true
           push: false
           tags: local/openclaw-unraid-cuda:${{ matrix.profile }}-test
+          cache-from: type=gha,scope=arch-openclaw-amd64
+          cache-to: type=gha,mode=max,scope=arch-openclaw-amd64
           build-args: |
             OPENCLAW_REF=${{ needs.resolve-build-config.outputs.openclaw_ref }}
 
@@ -209,6 +212,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     needs:
       - resolve-build-config
       - build-test-scan
@@ -272,6 +276,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=arch-openclaw-amd64
+          cache-to: type=gha,mode=max,scope=arch-openclaw-amd64
           build-args: |
             OPENCLAW_REF=${{ needs.resolve-build-config.outputs.openclaw_ref }}
           provenance: true

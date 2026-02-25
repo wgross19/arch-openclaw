@@ -49,6 +49,33 @@ docker run --rm -it \
 - `power` (optional): everything in `core` plus Linuxbrew/Homebrew and Playwright/Chromium browser support.
 - Both profiles share the same config/workspace mount contract so operators can switch profiles without data migration.
 - For OpenClaw `v2026.2.23+`, the entrypoint auto-patches `openclaw.json` with Control UI origin policy settings on startup (including one-shot Host-header fallback in `auto` mode) so Unraid `lan`-bind installs start without manual config edits.
+- The pinned Node runtime is built with shared system SQLite (`libsqlite3`) so `node:sqlite` has SQLite FTS5 support required by OpenClaw memory indexing/search.
+
+## Runtime Validation (Memory SQLite + FTS5 Support)
+Quick check in a running container:
+
+```bash
+docker exec -it OpenClaw-CUDA sh -lc 'node -e "import('\''node:sqlite'\'').then(()=>console.log(\"node:sqlite OK\"))"'
+```
+
+Validate FTS5 support explicitly:
+
+```bash
+docker exec -it OpenClaw-CUDA sh -lc 'node --input-type=module <<'\''NODE'\''
+import { DatabaseSync } from "node:sqlite";
+const db = new DatabaseSync(":memory:");
+db.exec("create virtual table t using fts5(x)");
+console.log("FTS5 OK");
+NODE'
+```
+
+If OpenClaw memory features are enabled, you can also verify:
+
+```bash
+docker exec -it OpenClaw-CUDA sh -lc 'openclaw memory status --deep'
+```
+
+Note: semantic memory still requires an embedding provider to be configured.
 
 ## Documentation
 - Architecture: `docs/architecture.md`
