@@ -51,6 +51,14 @@ RUN curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}.
   && ./configure --prefix=/usr/local --shared-sqlite \
   && make -j"$(nproc)" \
   && make install DESTDIR=/opt/node-rootfs \
+  && if [[ -f /opt/node-rootfs/usr/local/lib/node_modules/npm/bin/npm-cli.js ]]; then \
+       ln -sf ../lib/node_modules/npm/bin/npm-cli.js /opt/node-rootfs/usr/local/bin/npm; \
+       ln -sf ../lib/node_modules/npm/bin/npx-cli.js /opt/node-rootfs/usr/local/bin/npx; \
+       chmod +x /opt/node-rootfs/usr/local/lib/node_modules/npm/bin/npm-cli.js /opt/node-rootfs/usr/local/lib/node_modules/npm/bin/npx-cli.js; \
+     else \
+       echo "npm CLI not found after Node source install" >&2; \
+       exit 1; \
+     fi \
   && /opt/node-rootfs/usr/local/bin/node --version \
   && /opt/node-rootfs/usr/local/bin/npm --version \
   && /opt/node-rootfs/usr/local/bin/node --input-type=module <<'NODE'
